@@ -2,7 +2,7 @@
 /*
   Red Black Trees
   (C) 1999  Andrea Arcangeli <andrea@suse.de>
-  
+
   linux/include/linux/rbtree.h
 
   To use rbtrees you'll have to implement your own insert and search cores.

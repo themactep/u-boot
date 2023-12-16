@@ -37,6 +37,16 @@ dtb-$(CONFIG_SOC_JR2) += jr2_pcb110.dtb jr2_pcb111.dtb serval2_pcb112.dtb
 dtb-$(CONFIG_SOC_SERVALT) += servalt_pcb116.dtb
 dtb-$(CONFIG_SOC_SERVAL) += serval_pcb105.dtb serval_pcb106.dtb
 
+dtb-$(CONFIG_JZ4740_QI_LB60) += qi_lb60.dtb
+dtb-$(CONFIG_JZ4780_CI20) += ci20.dtb
+dtb-$(CONFIG_DT_HALLEY2_V20) += halley2v20.dtb
+dtb-$(CONFIG_DT_SEAL) += seal.dtb
+dtb-$(CONFIG_DT_X2000_V12_FPGA) += x2000_v12_fpga.dtb
+dtb-$(CONFIG_DT_T40_SHARK) += shark.dtb
+dtb-$(CONFIG_DT_T31_SWAN) += swan.dtb
+dtb-$(CONFIG_DT_T31_PERSONALCAM) += personalcam.dtb
+dtb-$(CONFIG_DT_T31_WYZE_CV3) += wyze_cv3.dtb
+
 include $(srctree)/scripts/Makefile.dts
 
 targets += $(dtb-y)

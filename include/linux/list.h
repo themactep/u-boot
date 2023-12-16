@@ -688,7 +688,7 @@ static inline void hlist_add_after(struct hlist_node *n,
  * @head:	the head for your list.
  * @member:	the name of the hlist_node within the struct.
  */
-#define hlist_for_each_entry_safe(pos, n, head, member) 		\
+#define hlist_for_each_entry_safe(pos, n, head, member)			\
 	for (pos = hlist_entry_safe((head)->first, typeof(*pos), member);\
 	     pos && ({ n = pos->member.next; 1; });			\
 	     pos = hlist_entry_safe(n, typeof(*pos), member))
