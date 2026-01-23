@@ -89,7 +89,7 @@ static void boot_jump_linux(bootm_headers_t *images)
 	printf("\nStarting kernel ...\n\n");
 
 	if (IMAGE_ENABLE_OF_LIBFDT && images->ft_len)
-		theKernel(-2, (ulong)images->ft_addr, 0, 0);
+		theKernel(-2, (char **)images->ft_addr, 0, 0);
 	else
 		theKernel(linux_argc, linux_argv, linux_env, 0);
 }
