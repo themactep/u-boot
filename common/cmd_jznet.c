@@ -24,7 +24,7 @@ void jznet_init(void) {
 		}
 	}
 #endif
-	int networkInitializationAttempted = 0;
+	int networkInitializationAttempted __attribute__((unused)) = 0;
 
 	/* Check if disable_eth is set to "true" */
 	if (disable_eth && strcmp(disable_eth, "true") == 0) {

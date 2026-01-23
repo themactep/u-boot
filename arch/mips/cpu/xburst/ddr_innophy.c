@@ -132,7 +132,7 @@ static void mem_remap(void)
 {
 	uint32_t start = 0, num = 0;
 	int row, col, dw32, bank8, cs0, cs1;
-	uint32_t size0 = 0, size1 = 0;
+	uint32_t size0 = 0, size1 __attribute__((unused)) = 0;
 
 #ifdef CONFIG_DDR_HOST_CC
 #if (CONFIG_DDR_CS0 == 1)
@@ -530,9 +530,9 @@ void phy_calibration(int al8_1x, int ah8_1x, int al8_2x, int ah8_2x)
 /* DDR sdram init */
 void sdram_init(void)
 {
-	int type = VARIABLE;
-	unsigned int mode;
-	unsigned int bypass = 0;
+	int type __attribute__((unused)) = VARIABLE;
+	unsigned int mode __attribute__((unused));
+	unsigned int bypass __attribute__((unused)) = 0;
 	unsigned int rate;
 #ifdef CONFIG_DDR_TYPE_DDR3
 	type = DDR3;

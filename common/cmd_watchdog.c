@@ -20,7 +20,7 @@ int do_watchdog(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	int timeout;
 	int time, i;
-	unsigned long val;
+	unsigned long val __attribute__((unused));
 	char *type = argv[1];
 
 	/*timeout is a number*/

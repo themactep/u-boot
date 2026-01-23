@@ -249,7 +249,7 @@ void nand_boot(unsigned int mem_address,unsigned int sectors)
 
 static int do_boota(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	unsigned long mmc_select,mem_address,sectors;
+	unsigned long mmc_select __attribute__((unused)), mem_address, sectors;
 	/* Consume 'boota' */
         argc--; argv++;
 	if (argc < 2)

@@ -965,6 +965,7 @@ void sfc_nor_RDID(unsigned int *idcode)
 	*idcode = chip_id & 0x00ffffff;
 }
 
+static void dump_norflash_params(void) __attribute__((unused));
 static void dump_norflash_params(void)
 {
 	int i;

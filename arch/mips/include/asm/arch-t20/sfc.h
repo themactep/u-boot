@@ -4,8 +4,8 @@
 #include <asm/arch/base.h>
 #include <asm/io.h>
 
-static int column_bak;
-static int page_addr_bak;
+static int column_bak __attribute__((unused));
+static int page_addr_bak __attribute__((unused));
 
 typedef enum{
 	TRANSFER,

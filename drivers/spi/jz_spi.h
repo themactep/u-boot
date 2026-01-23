@@ -134,7 +134,7 @@ struct nand_param_from_burner {
 	struct jz_spinand_partition *partition;
 };
 
-static struct jz_spi_support jz_spi_nand_support_table[] = {
+static struct jz_spi_support jz_spi_nand_support_table[] __attribute__((unused)) = {
 	{
 		.id_manufactory = 0xc8,
 		.id_device = 0xf1,

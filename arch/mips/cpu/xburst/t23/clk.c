@@ -376,7 +376,7 @@ void enable_uart_clk(void)
 void otg_phy_init(enum otg_mode_t mode, unsigned extclk)
 {
 #ifndef CONFIG_SPL_BUILD
-	int ext_sel = 0;
+	int ext_sel __attribute__((unused)) = 0;
 	int tmp_reg = 0;
 	int timeout = 0x7fffff;
 

@@ -70,7 +70,7 @@ void flush_dcache_range(ulong start_addr, ulong stop)
 	unsigned long lsize = CONFIG_SYS_CACHELINE_SIZE;
 	unsigned long addr = start_addr & ~(lsize - 1);
 	unsigned long aend = (stop - 1) & ~(lsize - 1);
-	unsigned int writebuffer;
+	volatile unsigned int writebuffer __attribute__((unused));
 
 	for (; addr <= aend; addr += lsize)
 		cache_op(HIT_WRITEBACK_INV_D, addr);
