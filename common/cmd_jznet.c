@@ -7,6 +7,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+extern void handle_gpio_settings(const char *env_var_name);
+extern int jz_net_initialize(bd_t *bis);
+
 void jznet_init(void) {
 #ifdef CONFIG_BITBANGMII
 	bb_miiphy_init();
