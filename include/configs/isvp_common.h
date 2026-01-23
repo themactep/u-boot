@@ -930,6 +930,10 @@ CONFIG_GPIO_IRCUT_SETTINGS
 /* cmd_boota.c needs this -_- legacy ingenic code */
 #define CONFIG_BOOTARGS ""
 
+#ifndef CONFIG_DEVICE_ENV
+#define CONFIG_DEVICE_ENV ""
+#endif
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
 "baseaddr=0x80600000\0" \
 "panic_timeout=10\0" \
@@ -943,8 +947,6 @@ CONFIG_DEVICE_ENV
 
 #define CONFIG_GPIO_IRCUT_SETTINGS \
 "gpio_ircut=52I 53I 49I 50I 57I 58I\0"
-
-#define CONFIG_DEVICE_ENV \
 
 #endif
 
