@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 
 	while ((bytes_read = read(fd, buffer, BUFFER_SIZE)) > 0) {
 		if (t >= SKIP_SIZE) {
-			crc = crc7(crc, buffer, bytes_read);
+			crc = crc7(crc, (u8 *)buffer, bytes_read);
 		} else {
 			t += BUFFER_SIZE;
 		}
