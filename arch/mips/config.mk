@@ -48,7 +48,7 @@ PLATFORM_CPPFLAGS		+= -G 0 $(ENDIANNESS)
 PLATFORM_CPPFLAGS		+= -msoft-float
 PLATFORM_LDFLAGS		+= -G 0 -static -n -nostdlib $(ENDIANNESS)
 PLATFORM_RELFLAGS		+= -ffunction-sections -fdata-sections
-LDFLAGS_FINAL			+= --gc-sections
+LDFLAGS_FINAL			+= --gc-sections --no-warn-mismatch
 OBJCFLAGS			+= --remove-section=.dynsym
 ifdef CONFIG_SPL_BUILD
 PLATFORM_CPPFLAGS		+= -fno-pic -mno-abicalls
