@@ -671,6 +671,7 @@ int jz_sfc_read(struct spi_flash *flash, u32 offset, size_t len, void *data)
 	return 0;
 }
 
+static int jz_sfc_read_norflash_params(struct spi_flash *flash, u32 offset, size_t len, void *data) __attribute__((unused));
 static int jz_sfc_read_norflash_params(struct spi_flash *flash, u32 offset, size_t len, void *data)
 {
 	unsigned char cmd[5];
@@ -1088,7 +1089,7 @@ int sfc_nor_init(unsigned int idcode)
 	}
 }
 
-int sfc_nor_read(struct spi_flash *flash, unsigned int src_addr, unsigned int count,unsigned int dst_addr)
+int sfc_nor_read(struct spi_flash *flash, u32 src_addr, size_t count, void *dst_addr)
 {
 	int ret = 0;
 
@@ -1115,7 +1116,7 @@ int sfc_nor_read(struct spi_flash *flash, unsigned int src_addr, unsigned int co
 	return 0;
 }
 
-int sfc_nor_write(struct spi_flash *flash, unsigned int src_addr, unsigned int count,unsigned int dst_addr)
+int sfc_nor_write(struct spi_flash *flash, u32 src_addr, size_t count, const void *dst_addr)
 {
 	int ret = 0;
 
