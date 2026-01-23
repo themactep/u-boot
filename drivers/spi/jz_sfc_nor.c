@@ -451,8 +451,12 @@ static int sfc_read(unsigned int addr, unsigned int addr_plus,
 }
 #endif
 
+#ifndef CPM_SSICDR
 #define CPM_SSICDR (0xb0000000 + 0x74)
+#endif
+#ifndef CPM_CLKGR0
 #define CPM_CLKGR0 (0xb0000000 + 0x20)
+#endif
 
 int sfc_init(void)
 {
