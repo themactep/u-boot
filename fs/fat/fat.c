@@ -1110,15 +1110,15 @@ do_fat_read_at(const char *filename, unsigned long pos, void *buffer,
 rootdir_done:
 
 	firsttime = 1;
-
-	while (isdir) {
-		int startsect = mydata->data_begin
-			+ START(dentptr) * mydata->clust_size;
+	{
 		dir_entry dent;
-		char *nextname = NULL;
+		while (isdir) {
+			int startsect = mydata->data_begin
+				+ START(dentptr) * mydata->clust_size;
+			char *nextname = NULL;
 
-		dent = *dentptr;
-		dentptr = &dent;
+			dent = *dentptr;
+			dentptr = &dent;
 
 		idx = dirdelim(subname);
 
@@ -1154,6 +1154,7 @@ rootdir_done:
 
 	ret = get_contents(mydata, dentptr, pos, buffer, maxsize);
 	debug("Size: %d, got: %ld\n", FAT2CPU32(dentptr->size), ret);
+	}
 
 exit:
 	free(mydata->fatbuf);
