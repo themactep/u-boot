@@ -15,6 +15,8 @@
 #include <asm/arch/cpm.h>
 #include <spl.h>
 
+extern void flush_cache_all(void);
+
 #ifdef CONFIG_SPL_BUILD
 /* Pointer to as well as the global data structure for SPL */
 DECLARE_GLOBAL_DATA_PTR;
