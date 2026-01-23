@@ -270,10 +270,10 @@ unsigned int clk_get_rate(int clk)
 
 void clk_set_rate(int clk, unsigned long rate)
 {
-	unsigned int cdr, src_id;
+	unsigned int cdr;
 	unsigned int pll_rate;
 	struct cgu *cgu = NULL;
-	unsigned regval = 0, reg = 0;
+	unsigned regval = 0;
 
 	if(clk >= CGU_CNT) {
 		printf("set clk id error\n");
@@ -358,7 +358,6 @@ void otg_phy_init(enum otg_mode_t mode, unsigned extclk) {
 #ifndef CONFIG_SPL_BUILD
 	int ext_sel __attribute__((unused)) = 0;
 	int tmp_reg = 0;
-	int timeout = 0x7fffff;
 
 	tmp_reg = cpm_inl(CPM_USBPCR1);
 	tmp_reg &= ~(USBPCR1_REFCLKSEL_MSK | USBPCR1_REFCLKDIV_MSK);

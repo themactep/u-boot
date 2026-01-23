@@ -376,7 +376,6 @@ void otg_phy_init(enum otg_mode_t mode, unsigned extclk)
 #ifndef CONFIG_SPL_BUILD
 	int ext_sel __attribute__((unused)) = 0;
 	int tmp_reg = 0;
-	int timeout = 0x7fffff;
 
 	tmp_reg = cpm_inl(CPM_USBPCR1);
 	tmp_reg &= ~(USBPCR1_REFCLKSEL_MSK | USBPCR1_REFCLKDIV_MSK);

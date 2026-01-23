@@ -436,9 +436,6 @@ static int jz_init(struct eth_device* dev, bd_t * bd)
 #endif
 	synopGMAC_check_phy_init(gmacdev);
 
-	u16 data;
-	s32 status = -ESYNOPGMACNOERR;
-
 	jz47xx_mac_configure();
 	/* setup tx_desc */
 	for (i = 0; i <  NUM_TX_DESCS; i++) {
@@ -518,8 +515,6 @@ int jz_net_initialize(bd_t *bis)
 	struct eth_device *dev;
 	u32 cpm_mphyc = 0;
 	int phy_id;
-	u16 data;
-	s32 status = -ESYNOPGMACNOERR;
 
 #if (CONFIG_NET_PHY_TYPE == PHY_TYPE_OMNI)
 	clk_set_rate(MACPHY,25000000);

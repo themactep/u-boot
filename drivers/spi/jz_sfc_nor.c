@@ -968,7 +968,6 @@ void sfc_nor_RDID(unsigned int *idcode)
 static void dump_norflash_params(void) __attribute__((unused));
 static void dump_norflash_params(void)
 {
-	int i;
 	printf(" =================================================\n");
 	printf(" ======   gparams->name = %s\n",gparams.name);
 	printf(" ======   gparams->id_manufactory = %x\n",gparams.id_manufactory);
@@ -1087,7 +1086,6 @@ int sfc_nor_init(unsigned int idcode)
 
 int sfc_nor_read(struct spi_flash *flash, unsigned int src_addr, unsigned int count,unsigned int dst_addr)
 {
-	int i;
 	int ret = 0;
 
 	flag = 0;
@@ -1115,7 +1113,6 @@ int sfc_nor_read(struct spi_flash *flash, unsigned int src_addr, unsigned int co
 
 int sfc_nor_write(struct spi_flash *flash, unsigned int src_addr, unsigned int count,unsigned int dst_addr)
 {
-	int i;
 	int ret = 0;
 
 #ifdef CONFIG_SPI_QUAD
@@ -1147,7 +1144,6 @@ int sfc_nor_write(struct spi_flash *flash, unsigned int src_addr, unsigned int c
 
 int sfc_nor_erase(struct spi_flash *flash, unsigned int src_addr, unsigned int count)
 {
-	int i;
 	int ret = 0;
 
 

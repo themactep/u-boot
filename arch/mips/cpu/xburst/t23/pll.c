@@ -343,7 +343,7 @@ int pll_init(void)
 	pll_set(MPLL,pll_cfg.mpll_freq);
 	cpccr_init();
 	{
-		unsigned apll, mpll, cclk, l2clk, h0clk, h2clk, pclk, pll_tmp;
+		unsigned apll, mpll, pll_tmp;
 		apll = clk_get_rate(APLL);
 		mpll = clk_get_rate(MPLL);
 		printf("apll_freq = %d\n", apll);
@@ -355,15 +355,15 @@ int pll_init(void)
 			pll_tmp = mpll;
 
 		gd->arch.gi->ddrfreq = pll_tmp/gd->arch.gi->ddr_div;
-		h0clk = pll_tmp/pll_cfg.h0div;
-		h2clk = pll_tmp/pll_cfg.h2div;
-		pclk = pll_tmp/pll_cfg.pdiv;
+		(void)(pll_tmp/pll_cfg.h0div); // h0clk unused
+		(void)(pll_tmp/pll_cfg.h2div); // h2clk unused
+		(void)(pll_tmp/pll_cfg.pdiv);  // pclk unused
 		if (CONFIG_CPU_SEL_PLL == APLL)
 			pll_tmp = apll;
 		else
 			pll_tmp = mpll;
-		cclk = gd->arch.gi->cpufreq = pll_tmp/pll_cfg.cdiv;
-		l2clk = pll_tmp/pll_cfg.l2div;
+		gd->arch.gi->cpufreq = pll_tmp/pll_cfg.cdiv;
+		(void)(pll_tmp/pll_cfg.l2div); // l2clk unused
 #if 0
 		debug("ddr sel %s, cpu sel %s\n", CONFIG_DDR_SEL_PLL == APLL ? "apll" : "mpll",
 				CONFIG_CPU_SEL_PLL == APLL ? "apll" : "mpll");
