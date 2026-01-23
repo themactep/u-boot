@@ -199,7 +199,10 @@ rpc_req(int rpc_prog, int rpc_proc, uint32_t *data, int datalen)
 		pkt.u.call.vers = htonl(2);	/* portmapper is version 2 */
 	}
 	pkt.u.call.proc = htonl(rpc_proc);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	p = (uint32_t *)&(pkt.u.call.data);
+#pragma GCC diagnostic pop
 
 	if (datalen)
 		memcpy((char *)p, (char *)data, datalen*sizeof(uint32_t));
@@ -331,7 +334,10 @@ nfs_lookup_req(char *fname)
 	fnamelen = strlen(fname);
 
 	p = &(data[0]);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 	p = (uint32_t *)rpc_add_credentials((long *)p);
+#pragma GCC diagnostic pop
 
 	if (supported_nfs_versions & NFSV2_FLAG) {
 		memcpy(p, dirfh, NFS_FHSIZE);
@@ -642,8 +648,11 @@ static int nfs_readlink_reply(uchar *pkt, unsigned len)
 		return -1;
 
 	if (!(supported_nfs_versions & NFSV2_FLAG)) { /* NFSV3_FLAG */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 		nfsv3_data_offset =
 			nfs3_get_attributes_offset(rpc_pkt.u.reply.data);
+#pragma GCC diagnostic pop
 	}
 
 	/* new path length */
@@ -704,8 +713,11 @@ nfs_read_reply(uchar *pkt, unsigned len)
 		rlen = ntohl(rpc_pkt.u.reply.data[18]);
 		data_ptr = (uchar *)&(rpc_pkt.u.reply.data[19]);
 	} else {  /* NFSV3_FLAG */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 		int nfsv3_data_offset =
 			nfs3_get_attributes_offset(rpc_pkt.u.reply.data);
+#pragma GCC diagnostic pop
 
 		/* count value */
 		rlen = ntohl(rpc_pkt.u.reply.data[1 + nfsv3_data_offset]);
