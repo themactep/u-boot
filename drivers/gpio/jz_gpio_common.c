@@ -213,37 +213,50 @@ int gpio_direction_output(unsigned gpio, int value)
 
 void gpio_enable_pull_up(unsigned gpio)
 {
+#ifdef GPIO_PXPUENS
 	unsigned port= gpio / 32;
 	unsigned pin = gpio % 32;
-
 	writel(1 << pin, GPIO_PXPUENS(port));
+#else
+	(void)gpio;
+#endif
 }
 
 void gpio_disable_pull_up(unsigned gpio)
 {
+#ifdef GPIO_PXPUENC
 	unsigned port= gpio / 32;
 	unsigned pin = gpio % 32;
-
 	writel(1 << pin, GPIO_PXPUENC(port));
+#else
+	(void)gpio;
+#endif
 }
 
 void gpio_enable_pull_down(unsigned gpio)
 {
+#ifdef GPIO_PXPDENS
 	unsigned port= gpio / 32;
 	unsigned pin = gpio % 32;
-
 	writel(1 << pin, GPIO_PXPDENS(port));
+#else
+	(void)gpio;
+#endif
 }
 
 void gpio_disable_pull_down(unsigned gpio)
 {
+#ifdef GPIO_PXPDENC
 	unsigned port= gpio / 32;
 	unsigned pin = gpio % 32;
-
 	writel(1 << pin, GPIO_PXPDENC(port));
+#else
+	(void)gpio;
+#endif
 }
 void gpio_set_pull_dir(unsigned gpio, int pull)
 {
+#if defined(CONFIG_T10) || defined(CONFIG_T15) || defined(CONFIG_T20)
 	unsigned port= gpio / 32;
 	unsigned pin = gpio % 32;
 	if (pull) {
@@ -251,6 +264,18 @@ void gpio_set_pull_dir(unsigned gpio, int pull)
 	} else {
 		writel(1 << pin, GPIO_PXPDIRC(port));
 	}
+#elif defined(CONFIG_T23) || defined(CONFIG_T31) || defined(CONFIG_C100)
+	unsigned port= gpio / 32;
+	unsigned pin = gpio % 32;
+	if (pull) {
+		writel(1 << pin, GPIO_PXPDENS(port));
+	} else {
+		writel(1 << pin, GPIO_PXPDENC(port));
+	}
+#else
+	(void)gpio;
+	(void)pull;
+#endif
 }
 
 void gpio_as_irq_high_level(unsigned gpio)
