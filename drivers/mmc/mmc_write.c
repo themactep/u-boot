@@ -12,6 +12,8 @@
 #include <part.h>
 #include "mmc_private.h"
 
+extern int get_mmc_csd_perm_w_protect(void);
+
 ulong mmc_erase_t(struct mmc *mmc, ulong start, lbaint_t blkcnt)
 {
 	struct mmc_cmd cmd;

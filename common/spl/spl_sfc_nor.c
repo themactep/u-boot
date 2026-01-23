@@ -123,7 +123,7 @@ static int sfc_read(unsigned int addr, unsigned int addr_plus,
 		return 0;
 }
 
-void sfc_init()
+void sfc_init(void)
 {
 	unsigned int tmp;
 

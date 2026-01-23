@@ -26,7 +26,7 @@ static struct spi_flash *flash;
 flash_info_t flash_info[1];
 static int flash_num = 0;
 
-void* norflash_memory_map_init()
+void* norflash_memory_map_init(void)
 {
 	int ret = 1;
 	void *buf;

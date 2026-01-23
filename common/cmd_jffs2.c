@@ -459,7 +459,7 @@ static struct part_info* jffs2_part_info(struct mtd_device *dev, unsigned int pa
 	return NULL;
 }
 
-extern void* norflash_memory_map_init();
+extern void* norflash_memory_map_init(void);
 extern void norflash_memory_map_deinit(void *buf);
 
 /***************************************************/

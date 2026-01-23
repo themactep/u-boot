@@ -271,7 +271,7 @@ void ddr_controller_init(void)
 	ddr_writel(DDRC_CTRL_VALUE & 0xffff8fff, DDRC_CTRL);
 }
 
-void ddr_inno_phy_init()
+void ddr_inno_phy_init(void)
 {
 	u32 reg = 0;
 	debug("ddr_inno_phy_init ..!\n");
