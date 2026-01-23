@@ -209,14 +209,11 @@ static unsigned int get_mac_rate(unsigned int xcdr)
 
 	switch ( maccdr >> 30 ) {
 	case 0:
-		pll_get_rate(APLL) / ((maccdr & 0xff) + 1);
-		break;
+		return pll_get_rate(APLL) / ((maccdr & 0xff) + 1);
 	case 1:
-		pll_get_rate(MPLL) / ((maccdr & 0xff) + 1);
-		break;
+		return pll_get_rate(MPLL) / ((maccdr & 0xff) + 1);
 	case 2:
-		pll_get_rate(VPLL) / ((maccdr & 0xff) + 1);
-		break;
+		return pll_get_rate(VPLL) / ((maccdr & 0xff) + 1);
 	default:
 		break;
 	}
