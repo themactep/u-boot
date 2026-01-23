@@ -293,7 +293,7 @@ void clk_set_rate(int clk, unsigned long rate)
 		cdr = (((pll_rate + rate - 1)/rate)/2 - 1)& 0xff;
 	else
 		cdr = ((pll_rate + rate - 1)/rate - 1 ) & 0xff;
-	debug("pll_rate = %d, rate = %d, cdr = %d\n",pll_rate,rate,cdr);
+	debug("pll_rate = %u, rate = %lu, cdr = %d\n",pll_rate,rate,cdr);
 	if(clk == DDR)
 		regval &= ~(0xf | 0x3f << 24);
 	else

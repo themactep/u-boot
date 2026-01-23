@@ -604,7 +604,7 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs, unsigned in
 	/* search the table for matches in shift and id */
 	for (i = 0; i < ARRAY_SIZE(flashes); ++i) {
 		if (flashes[i].shift == shift && flashes[i].idcode == *idp) {
-			debug("SF:    We have a match (0x%02X 0x%02X), call probe.\n", spi, idp);
+			debug("SF:    We have a match (0x%p 0x%p), call probe.\n", (void*)spi, (void*)idp);
 			flash = flashes[i].probe(spi, idp);
 			if (flash)
 				break;
