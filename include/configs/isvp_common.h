@@ -950,4 +950,4 @@ CONFIG_DEVICE_ENV
 
 #endif
 
-#endif /*__CONFIG_ISVP_COMMON__*/
+#endif /* __CONFIG_ISVP_COMMON_H__ */
