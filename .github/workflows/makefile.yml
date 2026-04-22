@@ -1,9 +1,9 @@
 name: u-boot-ingenic
 
 on:
-  schedule:
-    # 00:15 PST / Nightly
-    - cron:  '00 7 * * *'
+  push:
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       tg_disabled:
