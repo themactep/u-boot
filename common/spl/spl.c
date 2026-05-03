@@ -184,6 +184,8 @@ static void print_soc_id(void)
 		soc_name = "T31ZL";
 	} else if (cpu_id == 0x0031 && subsoctype1_shifted == 0x6666) {
 		soc_name = "T31ZX";
+	} else if (cpu_id == 0x0031 && subsoctype1_shifted == 0xEE00) {
+		soc_name = "QEMU-T31";
 	}
 
 	if (strcmp(soc_name, "Unknown") == 0) {
