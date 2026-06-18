@@ -199,13 +199,16 @@
 #endif
 #endif
 
-/* SATA */
-#ifndef SPL_NO_SATA
-#define SCSI_VEND_ID 0x1b4b
-#define SCSI_DEV_ID  0x9170
-#define CFG_SCSI_DEV_LIST {SCSI_VEND_ID, SCSI_DEV_ID}
-#endif
-
 #include <asm/fsl_secure_boot.h>
+
+#ifndef SPL_NO_MISC
+/* Initial environment variables */
+#define CFG_EXTRA_ENV_SETTINGS      \
+	EXTRA_ENV_SETTINGS              \
+	"board=ls1043ardb\0"            \
+	"fdtfile=fsl-ls1043a-rdb-sdk.dtb\0"    \
+	"image=Image\0"					\
+	"console_dbg=earlycon=uart8250,mmio,0x21c0500\0"
+#endif
 
 #endif /* __LS1043ARDB_H__ */

@@ -13,18 +13,23 @@
  * from hush: simple_itoa() was lifted from boa-0.93.15
  */
 
-#include <common.h>
 #include <charset.h>
 #include <efi_loader.h>
 #include <div64.h>
 #include <hexdump.h>
 #include <stdarg.h>
-#include <uuid.h>
+#include <u-boot/uuid.h>
+#include <stdio.h>
 #include <vsprintf.h>
 #include <linux/ctype.h>
 #include <linux/err.h>
 #include <linux/types.h>
 #include <linux/string.h>
+
+/* For %pOF */
+#if CONFIG_IS_ENABLED(OF_CONTROL)
+#include <dm/ofnode.h>
+#endif
 
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
@@ -308,7 +313,7 @@ static __maybe_unused char *string16(char *buf, char *end, u16 *s,
 	return buf;
 }
 
-#if CONFIG_IS_ENABLED(EFI_DEVICE_PATH_TO_TEXT)
+#if CONFIG_IS_ENABLED(EFI_DEVICE_PATH_TO_TEXT) && !defined(API_BUILD)
 static char *device_path_string(char *buf, char *end, void *dp, int field_width,
 				int precision, int flags)
 {
@@ -438,6 +443,30 @@ static char *uuid_string(char *buf, char *end, u8 *addr, int field_width,
 }
 #endif
 
+#if CONFIG_IS_ENABLED(OF_CONTROL) && !defined(API_BUILD)
+static char *ofnode_string(char *buf, char *end, ofnode *dp, int field_width,
+				int precision, int flags)
+{
+#define NP_PATH_MAX 64
+	char str[NP_PATH_MAX] = { 0 };
+	const char *err = "...";
+
+	/* If dp == NULL output the string '<NULL>' */
+	if (!dp || !ofnode_valid(*dp))
+		return string(buf, end, NULL, field_width, precision, flags);
+
+	/* Get the path and indicate if it got cut off */
+	if (ofnode_get_path(*dp, str, NP_PATH_MAX)) {
+		str[NP_PATH_MAX - 1] = '\0';
+		char *p = str + min((NP_PATH_MAX - 2) - strlen(err), strlen(str));
+		memcpy(p, err, strlen(err) + 1);
+	}
+
+	return string(buf, end, str, field_width, precision, flags);
+#undef NP_PATH_MAX
+}
+#endif
+
 /*
  * Show a '%p' thing.  A kernel extension is that the '%p' is followed
  * by an extra set of alphanumeric characters that are extended format
@@ -473,6 +502,14 @@ static char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 	case 'D':
 		return device_path_string(buf, end, ptr, field_width,
 					  precision, flags);
+#endif
+/* Device paths only exist in the EFI context. */
+#if CONFIG_IS_ENABLED(OF_CONTROL) && !defined(API_BUILD)
+	case 'O':
+		if (fmt[1] == 'F')
+			return ofnode_string(buf, end, ptr, field_width,
+					  precision, flags);
+		break;
 #endif
 	case 'a':
 		flags |= SPECIAL | ZEROPAD;

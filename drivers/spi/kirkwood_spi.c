@@ -7,7 +7,7 @@
  * Derived from drivers/spi/mpc8xxx_spi.c
  */
 
-#include <common.h>
+#include <config.h>
 #include <dm.h>
 #include <log.h>
 #include <malloc.h>
@@ -347,8 +347,8 @@ static const struct udevice_id mvebu_spi_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(mvebu_spi) = {
-	.name = "mvebu_spi",
+U_BOOT_DRIVER(kirkwood_spi) = {
+	.name = "kirkwood_spi",
 	.id = UCLASS_SPI,
 	.of_match = mvebu_spi_ids,
 	.ops = &mvebu_spi_ops,

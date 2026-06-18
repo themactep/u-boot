@@ -5,7 +5,6 @@
  * Copyright 2019 Google Inc
  */
 
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <spl.h>
@@ -38,7 +37,7 @@ static int designware_i2c_pci_of_to_plat(struct udevice *dev)
 {
 	struct dw_i2c *priv = dev_get_priv(dev);
 
-	if (spl_phase() < PHASE_SPL) {
+	if (xpl_phase() < PHASE_SPL) {
 		u32 base;
 		int ret;
 
@@ -54,7 +53,7 @@ static int designware_i2c_pci_of_to_plat(struct udevice *dev)
 				      PCI_COMMAND_MASTER);
 	}
 
-	if (spl_phase() < PHASE_BOARD_F) {
+	if (xpl_phase() < PHASE_BOARD_F) {
 		/* Handle early, fixed mapping into a different address space */
 		priv->regs = (struct i2c_regs *)dm_pci_read_bar32(dev, 0);
 	} else {
@@ -169,7 +168,7 @@ static int dw_i2c_acpi_fill_ssdt(const struct udevice *dev,
 	return 0;
 }
 
-struct acpi_ops dw_i2c_acpi_ops = {
+static struct acpi_ops dw_i2c_acpi_ops = {
 	.fill_ssdt	= dw_i2c_acpi_fill_ssdt,
 };
 

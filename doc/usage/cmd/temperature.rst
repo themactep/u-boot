@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0-or-later
 
+.. index::
+   single: temperature (command)
+
 temperature command
 ===================
 
@@ -42,9 +45,3 @@ Configuration
 -------------
 
 The *temperature* command is only available if CONFIG_CMD_TEMPERATURE=y.
-
-Return value
-------------
-
-The return value $? is set to 0 (true) if the command succeeded and to 1 (false)
-otherwise.

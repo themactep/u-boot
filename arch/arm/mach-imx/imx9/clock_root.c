@@ -5,15 +5,13 @@
  * Peng Fan <peng.fan@nxp.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <command.h>
-#include <asm/arch/clock.h>
-#include <asm/arch/sys_proto.h>
 #include <asm/arch/ccm_regs.h>
-#include <asm/global_data.h>
+#include <asm/arch/clock.h>
+#include <asm/arch/imx-regs.h>
+#include <asm/arch/sys_proto.h>
 #include <linux/iopoll.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static struct ccm_reg *ccm_reg = (struct ccm_reg *)CCM_BASE_ADDR;
 

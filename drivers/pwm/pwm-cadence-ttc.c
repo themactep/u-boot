@@ -6,7 +6,6 @@
 #define LOG_CATEGORY UCLASS_PWM
 
 #include <clk.h>
-#include <common.h>
 #include <div64.h>
 #include <dm.h>
 #include <log.h>
@@ -17,6 +16,7 @@
 #include <linux/bitfield.h>
 #include <linux/math64.h>
 #include <linux/log2.h>
+#include <linux/time.h>
 #include <dm/device_compat.h>
 
 #define CLOCK_CONTROL		0
@@ -37,8 +37,6 @@
 #define COUNTER_INTERVAL_ENABLE		BIT(1)
 #define COUNTER_COUNTING_DISABLE	BIT(0)
 
-#define NSEC_PER_SEC	1000000000L
-
 #define TTC_REG(reg, channel) ((reg) + (channel) * sizeof(u32))
 #define TTC_CLOCK_CONTROL(reg, channel) \
 	TTC_REG((reg) + CLOCK_CONTROL, (channel))
@@ -48,6 +46,8 @@
 	TTC_REG((reg) + INTERVAL_COUNTER, (channel))
 #define TTC_MATCH_1_COUNTER(reg, channel) \
 	TTC_REG((reg) + MATCH_1_COUNTER, (channel))
+
+#define TTC_PWM_CHANNELS	3
 
 struct cadence_ttc_pwm_plat {
 	u8 *regs;
@@ -59,7 +59,7 @@ struct cadence_ttc_pwm_priv {
 	u32 timer_width;
 	u32 timer_mask;
 	unsigned long frequency;
-	bool invert[2];
+	bool invert[TTC_PWM_CHANNELS];
 };
 
 static int cadence_ttc_pwm_set_invert(struct udevice *dev, uint channel,
@@ -67,7 +67,7 @@ static int cadence_ttc_pwm_set_invert(struct udevice *dev, uint channel,
 {
 	struct cadence_ttc_pwm_priv *priv = dev_get_priv(dev);
 
-	if (channel > 2) {
+	if (channel >= TTC_PWM_CHANNELS) {
 		dev_err(dev, "Unsupported channel number %d(max 2)\n", channel);
 		return -EINVAL;
 	}
@@ -89,7 +89,7 @@ static int cadence_ttc_pwm_set_config(struct udevice *dev, uint channel,
 	dev_dbg(dev, "channel %d, duty %d/period %d ns\n", channel,
 		duty_ns, period_ns);
 
-	if (channel > 2) {
+	if (channel >= TTC_PWM_CHANNELS) {
 		dev_err(dev, "Unsupported channel number %d(max 2)\n", channel);
 		return -EINVAL;
 	}
@@ -155,7 +155,7 @@ static int cadence_ttc_pwm_set_enable(struct udevice *dev, uint channel,
 {
 	struct cadence_ttc_pwm_priv *priv = dev_get_priv(dev);
 
-	if (channel > 2) {
+	if (channel >= TTC_PWM_CHANNELS) {
 		dev_err(dev, "Unsupported channel number %d(max 2)\n", channel);
 		return -EINVAL;
 	}

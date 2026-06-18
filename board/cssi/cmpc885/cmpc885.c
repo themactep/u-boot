@@ -9,7 +9,6 @@
  */
 
 #include <env.h>
-#include <common.h>
 #include <mpc8xx.h>
 #include <asm/cpm_8xx.h>
 #include <asm/io.h>
@@ -26,8 +25,6 @@
 #include <spi.h>
 
 #include "../common/common.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define ADDR_CPLD_R_RESET		((unsigned short __iomem *)CONFIG_CPLD_BASE)
 #define ADDR_CPLD_R_ETAT		((unsigned short __iomem *)(CONFIG_CPLD_BASE + 2))
@@ -115,8 +112,10 @@ static int setup_mac(void)
 	if (memcmp(din + EE_OFF_MAC1, &ident, sizeof(ident)) == 0)
 		eth_env_set_enetaddr("ethaddr", din + EE_OFF_MAC1);
 
-	if (memcmp(din + EE_OFF_MAC2, &ident, sizeof(ident)) == 0)
+	if (memcmp(din + EE_OFF_MAC2, &ident, sizeof(ident)) == 0) {
 		eth_env_set_enetaddr("eth1addr", din + EE_OFF_MAC2);
+		eth_env_set_enetaddr("eth2addr", din + EE_OFF_MAC2);
+	}
 
 	return 0;
 }

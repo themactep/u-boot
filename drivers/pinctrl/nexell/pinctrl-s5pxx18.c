@@ -7,17 +7,13 @@
  * (C) Copyright 2019 Stefan Bosch <stefan_b@posteo.net>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <errno.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <dm/pinctrl.h>
 #include <dm/root.h>
 #include "pinctrl-nexell.h"
 #include "pinctrl-s5pxx18.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static void nx_gpio_set_bit(u32 *value, u32 bit, int enable)
 {
@@ -131,7 +127,8 @@ static int is_pin_alive(const char *name)
 static int s5pxx18_pinctrl_set_state(struct udevice *dev,
 				     struct udevice *config)
 {
-	unsigned int count, idx, pin;
+	u32 pin;
+	int count, idx;
 	unsigned int pinfunc, pinpud, pindrv;
 	unsigned long reg;
 	const char *name;

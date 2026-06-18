@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-ifeq ($(CONFIG_SPL_BUILD)$(CONFIG_ARCH_TEGRA),yy)
+ifeq ($(CONFIG_XPL_BUILD)$(CONFIG_ARCH_TEGRA),yy)
 CONFIG_CPU_V7A=
 CONFIG_CPU_ARM720T=y
 endif
@@ -16,6 +16,7 @@ arch-$(CONFIG_CPU_V7A)		=$(call cc-option, -march=armv7-a, \
 				 $(call cc-option, -march=armv7))
 arch-$(CONFIG_CPU_V7M)		=-march=armv7-m
 arch-$(CONFIG_CPU_V7R)		=-march=armv7-r
+arch-$(CONFIG_CPU_V8M)		=-march=armv8-m.main
 ifeq ($(CONFIG_ARM64_CRC32),y)
 arch-$(CONFIG_ARM64)		=-march=armv8-a+crc
 else
@@ -24,7 +25,7 @@ endif
 
 # On Tegra systems we must build SPL for the armv4 core on the device
 # but otherwise we can use the value in CONFIG_SYS_ARM_ARCH
-ifeq ($(CONFIG_SPL_BUILD)$(CONFIG_ARCH_TEGRA),yy)
+ifeq ($(CONFIG_XPL_BUILD)$(CONFIG_ARCH_TEGRA),yy)
 arch-y += -D__LINUX_ARM_ARCH__=4
 else
 arch-y += -D__LINUX_ARM_ARCH__=$(CONFIG_SYS_ARM_ARCH)
@@ -42,6 +43,7 @@ tune-$(CONFIG_CPU_ARM1136)	=
 tune-$(CONFIG_CPU_ARM1176)	=
 tune-$(CONFIG_CPU_V7A)		=-mtune=generic-armv7-a
 tune-$(CONFIG_CPU_V7R)		=
+tune-$(CONFIG_CPU_V8M)		=
 tune-$(CONFIG_ARM64)		=
 
 # Evaluate tune cc-option calls now
@@ -51,6 +53,7 @@ PLATFORM_CPPFLAGS += $(arch-y) $(tune-y)
 
 # Machine directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
+machine-$(CONFIG_ARCH_AIROHA)		+= airoha
 machine-$(CONFIG_ARCH_APPLE)		+= apple
 machine-$(CONFIG_ARCH_ASPEED)		+= aspeed
 machine-$(CONFIG_ARCH_AT91)		+= at91
@@ -69,15 +72,16 @@ machine-$(CONFIG_ARCH_KIRKWOOD)		+= kirkwood
 machine-$(CONFIG_ARCH_LPC32XX)		+= lpc32xx
 machine-$(CONFIG_ARCH_MEDIATEK)		+= mediatek
 machine-$(CONFIG_ARCH_MESON)		+= meson
+machine-$(CONFIG_ARCH_MMP)		+= mmp
 machine-$(CONFIG_ARCH_MVEBU)		+= mvebu
 machine-$(CONFIG_ARCH_NEXELL)		+= nexell
 machine-$(CONFIG_ARCH_NPCM)             += npcm
 machine-$(CONFIG_ARCH_OMAP2PLUS)	+= omap2
-machine-$(CONFIG_ARCH_ORION5X)		+= orion5x
 machine-$(CONFIG_ARCH_OWL)		+= owl
-machine-$(CONFIG_ARCH_RMOBILE)		+= rmobile
+machine-$(CONFIG_ARCH_RENESAS)		+= renesas
 machine-$(CONFIG_ARCH_ROCKCHIP)		+= rockchip
 machine-$(CONFIG_ARCH_S5PC1XX)		+= s5pc1xx
+machine-$(CONFIG_ARCH_SC5XX)		+= sc5xx
 machine-$(CONFIG_ARCH_SNAPDRAGON)	+= snapdragon
 machine-$(CONFIG_ARCH_SOCFPGA)		+= socfpga
 machine-$(CONFIG_ARCH_STM32)		+= stm32
@@ -89,6 +93,7 @@ machine-$(CONFIG_ARCH_OCTEONTX)		+= octeontx
 machine-$(CONFIG_ARCH_OCTEONTX2)	+= octeontx2
 machine-$(CONFIG_ARCH_UNIPHIER)		+= uniphier
 machine-$(CONFIG_ARCH_VERSAL)		+= versal
+machine-$(CONFIG_ARCH_VERSAL2)		+= versal2
 machine-$(CONFIG_ARCH_VERSAL_NET)	+= versal-net
 machine-$(CONFIG_ARCH_ZYNQ)		+= zynq
 machine-$(CONFIG_ARCH_ZYNQMP)		+= zynqmp
@@ -104,7 +109,7 @@ libs-y += $(machdirs)
 
 head-y := arch/arm/cpu/$(CPU)/start.o
 
-ifeq ($(CONFIG_SPL_BUILD),y)
+ifeq ($(CONFIG_XPL_BUILD),y)
 ifeq ($(CONFIG_SYS_SOC)$(CONFIG_SPL_FRAMEWORK),"mxs")
 head-y := arch/arm/cpu/arm926ejs/mxs/start.o
 endif

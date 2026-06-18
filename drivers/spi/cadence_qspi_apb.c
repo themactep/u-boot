@@ -25,7 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <common.h>
 #include <log.h>
 #include <asm/io.h>
 #include <dma.h>
@@ -152,9 +151,9 @@ static int cadence_qspi_set_protocol(struct cadence_spi_priv *priv,
 /* Return 1 if idle, otherwise return 0 (busy). */
 static unsigned int cadence_qspi_wait_idle(void *reg_base)
 {
-	unsigned int start, count = 0;
+	unsigned long start, count = 0;
 	/* timeout in unit of ms */
-	unsigned int timeout = 5000;
+	unsigned long timeout = 5000;
 
 	start = get_timer(0);
 	for ( ; get_timer(start) < timeout ; ) {
@@ -171,8 +170,7 @@ static unsigned int cadence_qspi_wait_idle(void *reg_base)
 	}
 
 	/* Timeout, still in busy mode. */
-	printf("QSPI: QSPI is still busy after poll for %d times.\n",
-	       CQSPI_REG_RETRY);
+	printf("QSPI: QSPI is still busy after poll for %lu ms.\n", timeout);
 	return 0;
 }
 
@@ -305,6 +303,10 @@ void cadence_qspi_apb_delay(void *reg_base,
 		tshsl_ns -= sclk_ns + ref_clk_ns;
 	if (tchsh_ns >= sclk_ns + 3 * ref_clk_ns)
 		tchsh_ns -= sclk_ns + 3 * ref_clk_ns;
+
+	if (tshsl_ns < sclk_ns)
+		tshsl_ns = sclk_ns;
+
 	tshsl = DIV_ROUND_UP(tshsl_ns, ref_clk_ns);
 	tchsh = DIV_ROUND_UP(tchsh_ns, ref_clk_ns);
 	tslch = DIV_ROUND_UP(tslch_ns, ref_clk_ns);
@@ -352,7 +354,7 @@ void cadence_qspi_apb_controller_init(struct cadence_spi_priv *priv)
 
 int cadence_qspi_apb_exec_flash_cmd(void *reg_base, unsigned int reg)
 {
-	unsigned int retry = CQSPI_REG_RETRY;
+	int retry = CQSPI_REG_RETRY;
 
 	/* Write the CMDCTRL without start execution. */
 	writel(reg, reg_base + CQSPI_REG_CMDCTRL);
@@ -367,7 +369,7 @@ int cadence_qspi_apb_exec_flash_cmd(void *reg_base, unsigned int reg)
 		udelay(1);
 	}
 
-	if (!retry) {
+	if (retry == -1) {
 		printf("QSPI: flash command execution timeout\n");
 		return -EIO;
 	}
@@ -382,9 +384,9 @@ int cadence_qspi_apb_exec_flash_cmd(void *reg_base, unsigned int reg)
 	return 0;
 }
 
-static int cadence_qspi_setup_opcode_ext(struct cadence_spi_priv *priv,
-					 const struct spi_mem_op *op,
-					 unsigned int shift)
+int cadence_qspi_setup_opcode_ext(struct cadence_spi_priv *priv,
+				  const struct spi_mem_op *op,
+				  unsigned int shift)
 {
 	unsigned int reg;
 	u8 ext;
@@ -469,6 +471,9 @@ int cadence_qspi_apb_command_read(struct cadence_spi_priv *priv,
 		opcode = op->cmd.opcode >> 8;
 	else
 		opcode = op->cmd.opcode;
+
+	if (opcode == CMD_4BYTE_OCTAL_READ && !priv->dtr)
+		opcode = CMD_4BYTE_FAST_READ;
 
 	reg = opcode << CQSPI_REG_CMDCTRL_OPCODE_LSB;
 
@@ -746,6 +751,10 @@ cadence_qspi_apb_indirect_read_execute(struct cadence_spi_priv *priv,
 		goto failrd;
 	}
 
+	/* Wait til QSPI is idle */
+	if (!cadence_qspi_wait_idle(priv->regbase))
+		return -EIO;
+
 	return 0;
 
 failrd:
@@ -913,6 +922,11 @@ cadence_qspi_apb_indirect_write_execute(struct cadence_spi_priv *priv,
 
 	if (bounce_buf)
 		free(bounce_buf);
+
+	/* Wait til QSPI is idle */
+	if (!cadence_qspi_wait_idle(priv->regbase))
+		return -EIO;
+
 	return 0;
 
 failwr:

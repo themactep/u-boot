@@ -8,8 +8,8 @@
  * Pavel Herrmann <morpheus.ibis@gmail.com>
  */
 
-#include <common.h>
 #include <cpu_func.h>
+#include <errno.h>
 #include <event.h>
 #include <log.h>
 #include <asm/global_data.h>
@@ -58,7 +58,7 @@ static int device_bind_common(struct udevice *parent, const struct driver *drv,
 
 	ret = uclass_get(drv->id, &uc);
 	if (ret) {
-		debug("Missing uclass for driver %s\n", drv->name);
+		dm_warn("Missing uclass for driver %s\n", drv->name);
 		return ret;
 	}
 
@@ -473,7 +473,11 @@ static int device_get_dma_constraints(struct udevice *dev)
 		return ret;
 	}
 
-	dev_set_dma_offset(dev, cpu - bus);
+#if CONFIG_IS_ENABLED(DM_DMA)
+	dev->dma_cpu = cpu;
+	dev->dma_bus = bus;
+	dev->dma_size = size;
+#endif
 
 	return 0;
 }

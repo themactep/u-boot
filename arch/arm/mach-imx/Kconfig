@@ -1,6 +1,8 @@
 config MACH_IMX
 	bool
 
+if MACH_IMX
+
 config HAS_CAAM
 	bool
 
@@ -54,6 +56,7 @@ config IMX_HAB
 	bool "Support i.MX HAB features"
 	depends on ARCH_MX7 || ARCH_MX6 || ARCH_MX5 || ARCH_IMX8M || ARCH_MX7ULP
 	select FSL_CAAM if HAS_CAAM
+	select SPL_DRIVERS_MISC if SPL
 	imply CMD_DEKBLOB if HAS_CAAM
 	help
 	  This option enables the support for secure boot (HAB).
@@ -177,7 +180,7 @@ config DDRMC_VF610_CALIBRATION
 
 config IMX8_ROMAPI
 	def_bool y
-	depends on IMX8MN || IMX8MP || IMX8ULP || IMX9
+	depends on IMX8MN || IMX8MP || IMX8ULP || IMX91 || IMX93
 
 config SPL_IMX_ROMAPI_LOADADDR
 	hex "Default load address to load image through ROM API"
@@ -199,3 +202,5 @@ config IOMUX_LPSR
 
 config IOMUX_SHARE_CONF_REG
 	bool
+
+endif

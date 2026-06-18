@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: loadb (command)
+
 loadb command
 =============
 
@@ -63,8 +66,3 @@ Configuration
 -------------
 
 The command is only available if CONFIG_CMD_LOADB=y.
-
-Return value
-------------
-
-The return value $? is 0 (true) on success, 1 (false) on error.

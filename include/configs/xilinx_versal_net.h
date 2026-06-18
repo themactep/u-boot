@@ -16,8 +16,8 @@
 /* #define CONFIG_ARMV8_SWITCH_TO_EL1 */
 
 /* Generic Interrupt Controller Definitions */
-#define GICD_BASE	0xF9000000
-#define GICR_BASE	0xF9060000
+#define GICD_BASE	0xe2000000
+#define GICR_BASE	0xe2060000
 
 /* Serial setup */
 #define CFG_SYS_BAUDRATE_TABLE \
@@ -42,9 +42,6 @@
 #endif
 
 /* Ethernet driver */
-#if defined(CONFIG_ZYNQ_GEM)
-# define PHY_ANEG_TIMEOUT	20000
-#endif
 
 #define ENV_MEM_LAYOUT_SETTINGS \
 	"fdt_addr_r=0x40000000\0" \

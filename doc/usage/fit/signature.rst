@@ -15,7 +15,7 @@ that it can be verified using a public key later. Provided that the private
 key is kept secret and the public key is stored in a non-volatile place,
 any image can be verified in this way.
 
-See verified-boot.txt for more general information on verified boot.
+See :doc:`verified-boot` for more general information on verified boot.
 
 
 Concepts
@@ -93,7 +93,7 @@ Public keys should be stored as sub-nodes in a /signature node. Required
 properties are:
 
 algo
-    Algorithm name (e.g. "sha1,rsa2048" or "sha256,ecdsa256")
+    Algorithm name (e.g. "sha256,rsa2048" or "sha512,ecdsa256")
 
 Optional properties are:
 
@@ -219,28 +219,28 @@ As an example, consider this FIT::
             kernel-1 {
                 data = <data for kernel1>
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...kernel signature 1...>
                 };
             };
             kernel-2 {
                 data = <data for kernel2>
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...kernel signature 2...>
                 };
             };
             fdt-1 {
                 data = <data for fdt1>;
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...fdt signature 1...>
                 };
             };
             fdt-2 {
                 data = <data for fdt2>;
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...fdt signature 2...>
                 };
             };
@@ -291,28 +291,28 @@ So the above example is adjusted to look like this::
             kernel-1 {
                 data = <data for kernel1>
                 hash-1 {
-                    algo = "sha1";
+                    algo = "sha256";
                     value = <...kernel hash 1...>
                 };
             };
             kernel-2 {
                 data = <data for kernel2>
                 hash-1 {
-                    algo = "sha1";
+                    algo = "sha256";
                     value = <...kernel hash 2...>
                 };
             };
             fdt-1 {
                 data = <data for fdt1>;
                 hash-1 {
-                    algo = "sha1";
+                    algo = "sha256";
                     value = <...fdt hash 1...>
                 };
             };
             fdt-2 {
                 data = <data for fdt2>;
                 hash-1 {
-                    algo = "sha1";
+                    algo = "sha256";
                     value = <...fdt hash 2...>
                 };
             };
@@ -323,7 +323,7 @@ So the above example is adjusted to look like this::
                 kernel = "kernel-1";
                 fdt = "fdt-1";
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...conf 1 signature...>;
                 };
             };
@@ -331,7 +331,7 @@ So the above example is adjusted to look like this::
                 kernel = "kernel-2";
                 fdt = "fdt-2";
                 signature-1 {
-                    algo = "sha1,rsa2048";
+                    algo = "sha256,rsa2048";
                     value = <...conf 1 signature...>;
                 };
             };
@@ -353,20 +353,27 @@ meantime.
 Details
 -------
 The signature node contains a property ('hashed-nodes') which lists all the
-nodes that the signature was made over.  The image is walked in order and each
-tag processed as follows:
+nodes that the signature was made over.  The signer (mkimage) writes this
+property as a record of what was included in the hash.  During verification,
+however, U-Boot does not read 'hashed-nodes'. Instead it rebuilds the node
+list from the configuration's own image references (kernel, fdt, ramdisk,
+etc.), since 'hashed-nodes' is not itself covered by the signature. The
+rebuilt list always includes the root node, the configuration node, each
+referenced image node and its hash/cipher subnodes.
+
+The image is walked in order and each tag processed as follows:
 
 DTB_BEGIN_NODE
     The tag and the following name are included in the signature
-    if the node or its parent are present in 'hashed-nodes'
+    if the node or its parent are present in the node list
 
 DTB_END_NODE
     The tag is included in the signature if the node or its parent
-    are present in 'hashed-nodes'
+    are present in the node list
 
 DTB_PROPERTY
     The tag, the length word, the offset in the string table, and
-    the data are all included if the current node is present in 'hashed-nodes'
+    the data are all included if the current node is present in the node list
     and the property name is not 'data'.
 
 DTB_END
@@ -374,7 +381,7 @@ DTB_END
 
 DTB_NOP
     The tag is included in the signature if the current node is present
-    in 'hashed-nodes'
+    in the node list
 
 In addition, the signature contains a property 'hashed-strings' which contains
 the offset and length in the string table of the strings that are to be
@@ -433,16 +440,14 @@ CONFIG_LEGACY_IMAGE_FORMAT
 Testing
 -------
 
-An easy way to test signing and verification is to use the test script
-provided in test/vboot/vboot_test.sh. This uses sandbox (a special version
+An easy way to test signing and verification is to use the vboot tests
+provided in the pytest suite. This uses sandbox (a special version
 of U-Boot which runs under Linux) to show the operation of a 'bootm'
 command loading and verifying images.
 
 A sample run is show below::
 
-    $ make O=sandbox sandbox_config
-    $ make O=sandbox
-    $ O=sandbox ./test/vboot/vboot_test.sh
+    $ ./test/py/test.py --bd sandbox --build -k vboot
 
 
 Simple Verified Boot Test
@@ -671,7 +676,7 @@ Create the fitImage::
 Sign the fitImage with the hardware key::
 
     $ ./tools/mkimage -F -k \
-    "model=PKCS%2315%20emulated;manufacturer=ZeitControl;serial=000xxxxxxxxx;token=OpenPGP%20card%20%28User%20PIN%20%28sig%29%29" \
+    "pkcs11:model=PKCS%2315%20emulated;manufacturer=ZeitControl;serial=000xxxxxxxxx;token=OpenPGP%20card%20%28User%20PIN%20%28sig%29%29" \
     -K u-boot.dtb -N pkcs11 -r fitImage
 
 

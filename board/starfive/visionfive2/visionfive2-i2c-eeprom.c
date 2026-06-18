@@ -4,7 +4,6 @@
  * Author: Yanhong Wang<yanhong.wang@starfivetech.com>
  */
 
-#include <common.h>
 #include <command.h>
 #include <env.h>
 #include <i2c.h>
@@ -106,7 +105,8 @@ struct eeprom_atom4_data {
 	u8 bom_revision;		/* BOM version */
 	u8 mac0_addr[MAC_ADDR_BYTES];	/* Ethernet0 MAC */
 	u8 mac1_addr[MAC_ADDR_BYTES];	/* Ethernet1 MAC */
-	u8 reserved[2];
+	u8 onboard_module;	/* Onboard module flag: bit7-1: reserved, bit0: WIFI/BT */
+	u8 reserved;
 };
 
 struct starfive_eeprom_atom4 {
@@ -177,7 +177,7 @@ static void show_eeprom(void)
 	printf("Vendor : %s\n", pbuf.eeprom.atom1.data.vstr);
 	printf("Product full SN: %s\n", pbuf.eeprom.atom1.data.pstr);
 	printf("data version: 0x%x\n", pbuf.eeprom.atom4.data.version);
-	if (pbuf.eeprom.atom4.data.version == 2) {
+	if (pbuf.eeprom.atom4.data.version == 2 || pbuf.eeprom.atom4.data.version == 3) {
 		printf("PCB revision: 0x%x\n", pbuf.eeprom.atom4.data.pcb_revision);
 		printf("BOM revision: %c\n", pbuf.eeprom.atom4.data.bom_revision);
 		printf("Ethernet MAC0 address: %02x:%02x:%02x:%02x:%02x:%02x\n",
@@ -188,6 +188,14 @@ static void show_eeprom(void)
 		       pbuf.eeprom.atom4.data.mac1_addr[0], pbuf.eeprom.atom4.data.mac1_addr[1],
 		       pbuf.eeprom.atom4.data.mac1_addr[2], pbuf.eeprom.atom4.data.mac1_addr[3],
 		       pbuf.eeprom.atom4.data.mac1_addr[4], pbuf.eeprom.atom4.data.mac1_addr[5]);
+		if (pbuf.eeprom.atom4.data.version == 3) {
+			char str[25] = "Onboard module: ";
+
+			if (pbuf.eeprom.atom4.data.onboard_module & BIT(0))
+				strcat(str, "WIFI/BT");
+
+			printf("%s\n", str);
+		}
 	} else {
 		printf("Custom data v%d is not Supported\n", pbuf.eeprom.atom4.data.version);
 		dump_raw_eeprom();
@@ -261,6 +269,7 @@ static void init_local_copy(void)
 	pbuf.eeprom.atom4.data.bom_revision = BOM_VERSION;
 	set_mac_address(STARFIVE_DEFAULT_MAC0, 0);
 	set_mac_address(STARFIVE_DEFAULT_MAC1, 1);
+	pbuf.eeprom.atom4.data.onboard_module = 0;
 }
 
 /**
@@ -276,7 +285,7 @@ static int prog_eeprom(unsigned int size)
 
 	if (is_match_magic()) {
 		printf("MAGIC ERROR, Please check the data@%p.\n", pbuf.buf);
-		return -1;
+		return CMD_RET_FAILURE;
 	}
 
 	ret = i2c_get_chip_for_busnum(CONFIG_SYS_EEPROM_BUS_NUM,
@@ -286,7 +295,7 @@ static int prog_eeprom(unsigned int size)
 	if (ret) {
 		printf("Get i2c bus:%d addr:%d fail.\n", CONFIG_SYS_EEPROM_BUS_NUM,
 		       CONFIG_SYS_I2C_EEPROM_ADDR);
-		return ret;
+		return CMD_RET_FAILURE;
 	}
 
 	for (i = 0, p = (u8 *)pbuf.buf; i < size; ) {
@@ -315,11 +324,11 @@ static int prog_eeprom(unsigned int size)
 	if (ret) {
 		has_been_read = -1;
 		printf("Programming failed.\n");
-		return -1;
+		return CMD_RET_FAILURE;
 	}
 
 	printf("Programming passed.\n");
-	return 0;
+	return CMD_RET_SUCCESS;
 }
 
 /**
@@ -387,6 +396,23 @@ static void set_bom_revision(char *string)
 }
 
 /**
+ * set_onboard_module() - stores a StarFive onboard module flag into the local EEPROM copy
+ *
+ * Takes a pointer to a string representing the numeric onboard module flag in
+ * Hexadecimal ("0" - "FF"), stores it in the onboard_module field of the
+ * EEPROM local copy, and updates the CRC of the local copy.
+ */
+static void set_onboard_module(char *string)
+{
+	u8 onboard_module;
+
+	onboard_module = simple_strtoul(string, &string, 16);
+	pbuf.eeprom.atom4.data.onboard_module = onboard_module;
+
+	update_crc();
+}
+
+/**
  * set_product_id() - stores a StarFive product ID into the local EEPROM copy
  *
  * Takes a pointer to a string representing the numeric product ID  in
@@ -403,6 +429,32 @@ static void set_product_id(char *string)
 	memcpy((void *)pbuf.eeprom.atom1.data.pstr, (void *)string, len);
 
 	update_crc();
+}
+
+/**
+ * set_vendor() - set vendor name
+ *
+ * Takes a pointer to a string representing the vendor name, e.g.
+ * "StarFive Technology Co., Ltd.", stores it in the vendor field
+ * of the EEPROM local copy, and updates the CRC of the local copy.
+ */
+static void set_vendor(char *string)
+{
+	memset(pbuf.eeprom.atom1.data.vstr, 0,
+	       sizeof(pbuf.eeprom.atom1.data.vstr));
+
+	strncpy(pbuf.eeprom.atom1.data.vstr,
+		string, sizeof(pbuf.eeprom.atom1.data.vstr) - 1);
+
+	update_crc();
+}
+
+const char *get_product_id_from_eeprom(void)
+{
+	if (read_eeprom())
+		return NULL;
+
+	return pbuf.eeprom.atom1.data.pstr;
 }
 
 int do_mac(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
@@ -453,8 +505,14 @@ int do_mac(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	} else if (!strcmp(cmd, "bom_revision")) {
 		set_bom_revision(argv[2]);
 		return 0;
+	} else if (!strcmp(cmd, "onboard_module")) {
+		set_onboard_module(argv[2]);
+		return 0;
 	} else if (!strcmp(cmd, "product_id")) {
 		set_product_id(argv[2]);
+		return 0;
+	} else if (!strcmp(cmd, "vendor")) {
+		set_vendor(argv[2]);
 		return 0;
 	}
 
@@ -496,7 +554,7 @@ int mac_read_from_eeprom(void)
 	 * "<product>-<date>-<DDR&eMMC>-<serial_number>"
 	 * <date>: 4Byte, should be the output of `date +%y%W`
 	 * <DDR&eMMC>: 8Byte, "D008" means 8GB, "D01T" means 1TB;
-	 *     "E000" means no eMMC，"E032" means 32GB, "E01T" means 1TB.
+	 *     "E000" means no eMMC, "E032" means 32GB, "E01T" means 1TB.
 	 * <serial_number>: 8Byte, the Unique Identifier of board in hex.
 	 */
 	if (!env_get("serial#"))
@@ -507,38 +565,35 @@ int mac_read_from_eeprom(void)
 	return 0;
 }
 
-/**
- * get_pcb_revision_from_eeprom - get the PCB revision
- *
- * 1.2A return 'A'/'a', 1.3B return 'B'/'b',other values are illegal
- */
 u8 get_pcb_revision_from_eeprom(void)
 {
-	u8 pv = 0xFF;
-
 	if (read_eeprom())
-		return pv;
+		return 0;
 
-	return pbuf.eeprom.atom1.data.pstr[6];
+	return pbuf.eeprom.atom4.data.pcb_revision;
 }
 
-/**
- * get_ddr_size_from_eeprom - get the DDR size
- * pstr:  VF7110A1-2228-D008E000-00000001
- * VF7110A1/VF7110B1 : VisionFive JH7110A /VisionFive JH7110B
- * D008:　8GB LPDDR4
- * E000: No emmc device, ECxx: include emmc device, xx: Capacity size[GB]
- * return: the field of 'D008E000'
- */
-
-u32 get_ddr_size_from_eeprom(void)
+u8 get_ddr_size_from_eeprom(void)
 {
-	u32 pv = 0xFFFFFFFF;
+	if (read_eeprom())
+		return 0;
+
+	return (hextoul(&pbuf.eeprom.atom1.data.pstr[14], NULL) >> 16) & 0xFF;
+}
+
+u32 get_mmc_size_from_eeprom(void)
+{
+	u32 size;
 
 	if (read_eeprom())
-		return pv;
+		return 0;
 
-	return hextoul(&pbuf.eeprom.atom1.data.pstr[14], NULL);
+	size = dectoul(&pbuf.eeprom.atom1.data.pstr[19], NULL);
+
+	if (pbuf.eeprom.atom1.data.pstr[21] == 'T')
+		size <<= 10;
+
+	return size;
 }
 
 U_BOOT_LONGHELP(mac,
@@ -560,8 +615,12 @@ U_BOOT_LONGHELP(mac,
 	"    - stores a StarFive PCB revision into the local EEPROM copy\n"
 	"mac bom_revision <A>\n"
 	"    - stores a StarFive BOM revision into the local EEPROM copy\n"
+	"mac onboard_module <?>\n"
+	"    - stores a StarFive onboard module flag into the local EEPROM copy\n"
 	"mac product_id <VF7110A1-2228-D008E000-xxxxxxxx>\n"
-	"    - stores a StarFive product ID into the local EEPROM copy\n");
+	"    - stores a StarFive product ID into the local EEPROM copy\n"
+	"mac vendor <Vendor Name>\n"
+	"    - set vendor string\n");
 
 U_BOOT_CMD(
 	mac, 3, 1,  do_mac,

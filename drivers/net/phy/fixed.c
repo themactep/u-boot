@@ -6,14 +6,10 @@
  */
 
 #include <config.h>
-#include <common.h>
 #include <malloc.h>
 #include <phy.h>
 #include <dm.h>
 #include <fdt_support.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static int fixedphy_probe(struct phy_device *phydev)
 {

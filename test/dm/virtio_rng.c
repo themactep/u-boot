@@ -4,7 +4,6 @@
  * Written by Andrew Scull <ascull@google.com>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <virtio_types.h>
 #include <virtio.h>
@@ -20,12 +19,19 @@ struct virtio_rng_priv {
 	struct virtqueue *rng_vq;
 };
 
+#define BUFFER_SIZE 16
+#define CANARY "CANARYCANARYCANARYCANARY"
+
 /* Test the virtio-rng driver validates the used size */
 static int dm_test_virtio_rng_check_len(struct unit_test_state *uts)
 {
 	struct udevice *bus, *dev;
 	struct virtio_rng_priv *priv;
-	u8 buffer[16];
+	u8 buffer[BUFFER_SIZE + sizeof(CANARY)];
+
+	/* write known data to buffer */
+	memset(buffer, 0xaa, BUFFER_SIZE);
+	memcpy(buffer + BUFFER_SIZE, CANARY, sizeof(CANARY));
 
 	/* check probe success */
 	ut_assertok(uclass_first_device_err(UCLASS_VIRTIO, &bus));
@@ -45,8 +51,11 @@ static int dm_test_virtio_rng_check_len(struct unit_test_state *uts)
 	priv->rng_vq->vring.used->ring[0].len = U32_MAX;
 
 	/* check the driver gracefully handles the error */
-	ut_asserteq(-EIO, dm_rng_read(dev, buffer, sizeof(buffer)));
+	dm_rng_read(dev, buffer, BUFFER_SIZE);
+
+	/* check for the canary bytes behind the real buffer */
+	ut_asserteq_mem(buffer + BUFFER_SIZE, CANARY, sizeof(CANARY));
 
 	return 0;
 }
-DM_TEST(dm_test_virtio_rng_check_len, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_virtio_rng_check_len, UTF_SCAN_PDATA | UTF_SCAN_FDT);

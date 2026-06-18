@@ -4,7 +4,6 @@
  * Author: Eric Gao <eric.gao@rock-chips.com>
  */
 
-#include <common.h>
 #include <clk.h>
 #include <display.h>
 #include <dm.h>
@@ -14,7 +13,6 @@
 #include "rk_mipi.h"
 #include <syscon.h>
 #include <asm/gpio.h>
-#include <asm/io.h>
 #include <dm/uclass-internal.h>
 #include <linux/err.h>
 #include <linux/kernel.h>
@@ -170,8 +168,8 @@ static const struct udevice_id rk_mipi_dsi_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(rk_mipi_dsi) = {
-	.name	= "rk_mipi_dsi",
+U_BOOT_DRIVER(rk3399_mipi_dsi) = {
+	.name	= "rk3399_mipi_dsi",
 	.id	= UCLASS_DISPLAY,
 	.of_match = rk_mipi_dsi_ids,
 	.of_to_plat = rk_mipi_of_to_plat,

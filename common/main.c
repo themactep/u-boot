@@ -6,9 +6,10 @@
 
 /* #define	DEBUG	*/
 
-#include <common.h>
 #include <autoboot.h>
+#include <button.h>
 #include <bootstage.h>
+#include <bootstd.h>
 #include <cli.h>
 #include <command.h>
 #include <console.h>
@@ -18,6 +19,7 @@
 #include <net.h>
 #include <version_string.h>
 #include <efi_loader.h>
+#include <event.h>
 
 static void run_preboot_environment_command(void)
 {
@@ -52,6 +54,9 @@ void main_loop(void)
 	if (IS_ENABLED(CONFIG_USE_PREBOOT))
 		run_preboot_environment_command();
 
+	if (event_notify_null(EVT_POST_PREBOOT))
+		return;
+
 	if (IS_ENABLED(CONFIG_UPDATE_TFTP))
 		update_tftp(0UL, NULL, NULL);
 
@@ -61,12 +66,24 @@ void main_loop(void)
 			efi_launch_capsules();
 	}
 
+	process_button_cmds();
+
 	s = bootdelay_process();
 	if (cli_process_fdt(&s))
 		cli_secure_boot_cmd(s);
 
 	autoboot_command(s);
 
+	/* if standard boot if enabled, assume that it will be able to boot */
+	if (IS_ENABLED(CONFIG_BOOTSTD_PROG)) {
+		int ret;
+
+		ret = bootstd_prog_boot();
+		printf("Standard boot failed (err=%dE)\n", ret);
+		panic("Failed to boot");
+	}
+
 	cli_loop();
+
 	panic("No CLI available");
 }

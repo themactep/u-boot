@@ -10,7 +10,6 @@
  * Copyright (C) 2015 Renesas Electronics Corp.
  */
 
-#include <common.h>
 #include <clk-uclass.h>
 #include <dm.h>
 #include <linux/bitops.h>
@@ -181,6 +180,7 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("can-if1",		 915,	R8A77995_CLK_S3D4),
 	DEF_MOD("can-if0",		 916,	R8A77995_CLK_S3D4),
 	DEF_MOD("rpc-if",		 917,	R8A77995_CLK_RPCD2),
+	DEF_MOD("adg",			 922,	R8A77995_CLK_ZA2),
 	DEF_MOD("i2c3",			 928,	R8A77995_CLK_S3D2),
 	DEF_MOD("i2c2",			 929,	R8A77995_CLK_S3D2),
 	DEF_MOD("i2c1",			 930,	R8A77995_CLK_S3D2),
@@ -216,18 +216,18 @@ static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[2] __initconst = {
 };
 
 static const struct mstp_stop_table r8a77995_mstp_table[] = {
-	{ 0x00210000, 0x0, 0x00210000, 0 },
-	{ 0x03e01000, 0x0, 0x03e01000, 0 },
-	{ 0x000e2fdc, 0x2000, 0x000e2fd8, 0 },
-	{ 0xc00014df, 0x400, 0xc00014df, 0 },
-	{ 0x80000004, 0x180, 0x80000004, 0 },
-	{ 0x40d20004, 0x0, 0x40d20004, 0 },
-	{ 0x08c0008c, 0x0, 0x08c0008c, 0 },
-	{ 0x09941c18, 0x0, 0x09941c18, 0 },
-	{ 0x00801087, 0x0, 0x00801087, 0 },
-	{ 0xf143dfc0, 0x0, 0xf143dfc0, 0 },
-	{ 0x063e1820, 0x0, 0x063e1820, 0 },
-	{ 0x00000000, 0x0, 0x00000000, 0 },
+	{ 0x00210000, 0x0, 0, 0 },
+	{ 0x03e01000, 0x0, 0, 0 },
+	{ 0x000e2fdc, 0x2000, 0, 0 },
+	{ 0xc00014df, 0x400, 0, 0 },
+	{ 0x80000004, 0x80, 0, 0 },
+	{ 0x40d20004, 0x0, 0, 0 },
+	{ 0x08c0008c, 0x0, 0, 0 },
+	{ 0x09941c18, 0x0, 0, 0 },
+	{ 0x00801087, 0x0, 0, 0 },
+	{ 0xf143dfc0, 0x0, 0, 0 },
+	{ 0x063e1820, 0x0, 0, 0 },
+	{ 0x00000000, 0x0, 0, 0 },
 };
 
 static const void *r8a77995_get_pll_config(const u32 cpg_mode)

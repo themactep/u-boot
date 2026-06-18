@@ -4,7 +4,6 @@
  * (C) Copyright 2019 GE
  */
 
-#include <common.h>
 #include <bootcount.h>
 #include <dm.h>
 #include <i2c_eeprom.h>
@@ -86,7 +85,7 @@ static const struct udevice_id bootcount_i2c_eeprom_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(bootcount_spi_flash) = {
+U_BOOT_DRIVER(bootcount_i2c_eeprom) = {
 	.name	= "bootcount-i2c-eeprom",
 	.id	= UCLASS_BOOTCOUNT,
 	.priv_auto	= sizeof(struct bootcount_i2c_eeprom_priv),

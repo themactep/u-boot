@@ -4,7 +4,6 @@
  * Copyright (C) 2017 Bin Meng <bmeng.cn@gmail.com>
  */
 
-#include <common.h>
 #include <blk.h>
 #include <bootdev.h>
 #include <cpu_func.h>
@@ -27,6 +26,23 @@
 #define ADMIN_TIMEOUT		60
 #define IO_TIMEOUT		30
 #define MAX_PRP_POOL		512
+
+/**
+ * nvme_invalidate_cache_aligned() - invalidate cache with proper alignment
+ *
+ * Aligns cache invalidation to cacheline boundaries to ensure correct
+ * behavior even when the DMA buffer is not aligned to page boundaries.
+ *
+ * @addr:	The start address of the buffer
+ * @length:	The length of the buffer in bytes
+ */
+static inline void nvme_invalidate_cache_aligned(uintptr_t addr, int length)
+{
+	uintptr_t start_addr = addr & ~(ARCH_DMA_MINALIGN - 1);
+	uintptr_t end_addr = ALIGN(addr + length, ARCH_DMA_MINALIGN);
+
+	invalidate_dcache_range(start_addr, end_addr);
+}
 
 static int nvme_wait_csts(struct nvme_dev *dev, u32 mask, u32 val)
 {
@@ -95,7 +111,7 @@ static int nvme_setup_prps(struct nvme_dev *dev, u64 *prp2,
 			*(prp_pool + i) = cpu_to_le64((ulong)prp_pool +
 					page_size);
 			i = 0;
-			prp_pool += page_size;
+			prp_pool = (u64 *)((uintptr_t)prp_pool + page_size);
 		}
 		*(prp_pool + i++) = cpu_to_le64(dma_addr);
 		dma_addr += page_size;
@@ -113,7 +129,10 @@ static __le16 nvme_get_cmd_id(void)
 {
 	static unsigned short cmdid;
 
-	return cpu_to_le16((cmdid < USHRT_MAX) ? cmdid++ : 0);
+	if (cmdid >= USHRT_MAX)
+		cmdid = 0;
+
+	return cpu_to_le16(cmdid++);
 }
 
 static u16 nvme_read_completion_status(struct nvme_queue *nvmeq, u16 index)
@@ -180,8 +199,10 @@ static int nvme_submit_sync_cmd(struct nvme_queue *nvmeq,
 		if ((status & 0x01) == phase)
 			break;
 		if (timeout_us > 0 && (timer_get_us() - start_time)
-		    >= timeout_us)
+		    >= timeout_us) {
+			pr_warn("nvme: cmd %#x timed out\n", cmd->common.command_id);
 			return -ETIMEDOUT;
+		}
 	}
 
 	ops = (struct nvme_ops *)nvmeq->dev->udev->driver->ops;
@@ -277,11 +298,6 @@ static int nvme_delete_queue(struct nvme_dev *dev, u8 opcode, u16 id)
 	c.delete_queue.qid = cpu_to_le16(id);
 
 	return nvme_submit_admin_cmd(dev, &c, NULL);
-}
-
-static int nvme_delete_sq(struct nvme_dev *dev, u16 sqid)
-{
-	return nvme_delete_queue(dev, nvme_admin_delete_sq, sqid);
 }
 
 static int nvme_delete_cq(struct nvme_dev *dev, u16 cqid)
@@ -454,6 +470,7 @@ int nvme_identify(struct nvme_dev *dev, unsigned nsid,
 	u32 page_size = dev->page_size;
 	int offset = dma_addr & (page_size - 1);
 	int length = sizeof(struct nvme_id_ctrl);
+	dma_addr_t orig_dma_addr = dma_addr;
 	int ret;
 
 	memset(&c, 0, sizeof(c));
@@ -471,13 +488,13 @@ int nvme_identify(struct nvme_dev *dev, unsigned nsid,
 
 	c.identify.cns = cpu_to_le32(cns);
 
-	invalidate_dcache_range(dma_addr,
-				dma_addr + sizeof(struct nvme_id_ctrl));
+	nvme_invalidate_cache_aligned((uintptr_t)orig_dma_addr,
+				      sizeof(struct nvme_id_ctrl));
 
 	ret = nvme_submit_admin_cmd(dev, &c, NULL);
 	if (!ret)
-		invalidate_dcache_range(dma_addr,
-					dma_addr + sizeof(struct nvme_id_ctrl));
+		nvme_invalidate_cache_aligned((uintptr_t)orig_dma_addr,
+					      sizeof(struct nvme_id_ctrl));
 
 	return ret;
 }
@@ -543,20 +560,19 @@ static int nvme_create_queue(struct nvme_queue *nvmeq, int qid)
 	nvmeq->cq_vector = qid - 1;
 	result = nvme_alloc_cq(dev, qid, nvmeq);
 	if (result < 0)
-		goto release_cq;
+		goto release_ret;
 
 	result = nvme_alloc_sq(dev, qid, nvmeq);
 	if (result < 0)
-		goto release_sq;
+		goto release_cq;
 
 	nvme_init_queue(nvmeq, qid);
 
 	return result;
 
- release_sq:
-	nvme_delete_sq(dev, qid);
  release_cq:
 	nvme_delete_cq(dev, qid);
+ release_ret:
 
 	return result;
 }
@@ -695,7 +711,9 @@ int nvme_scan_namespace(void)
 		if (ret) {
 			log_err("Failed to probe '%s': err=%dE\n", dev->name,
 				ret);
-			return ret;
+			/* Bail if we ran out of memory, else keep trying */
+			if (ret != -EBUSY)
+				return ret;
 		}
 	}
 
@@ -835,8 +853,8 @@ int nvme_init(struct udevice *udev)
 	ndev->udev = udev;
 	INIT_LIST_HEAD(&ndev->namespaces);
 	if (readl(&ndev->bar->csts) == -1) {
-		ret = -ENODEV;
-		printf("Error: %s: Out of memory!\n", udev->name);
+		ret = -EBUSY;
+		printf("Error: %s: Controller not ready!\n", udev->name);
 		goto free_nvme;
 	}
 
@@ -864,14 +882,14 @@ int nvme_init(struct udevice *udev)
 	if (!ndev->prp_pool) {
 		ret = -ENOMEM;
 		printf("Error: %s: Out of memory!\n", udev->name);
-		goto free_nvme;
+		goto free_queue;
 	}
 	ndev->prp_entry_num = MAX_PRP_POOL >> 3;
 
 	ret = nvme_setup_io_queues(ndev);
 	if (ret) {
 		log_debug("Unable to setup I/O queues(err=%dE)\n", ret);
-		goto free_queue;
+		goto free_prp_pool;
 	}
 
 	nvme_get_info_from_identify(ndev);
@@ -881,7 +899,7 @@ int nvme_init(struct udevice *udev)
 	id = memalign(ndev->page_size, sizeof(struct nvme_id_ns));
 	if (!id) {
 		ret = -ENOMEM;
-		goto free_queue;
+		goto free_prp_pool;
 	}
 
 	for (int i = 1; i <= ndev->nn; i++) {
@@ -911,8 +929,10 @@ int nvme_init(struct udevice *udev)
 			goto free_id;
 
 		ret = bootdev_setup_for_sibling_blk(ns_udev, "nvme_bootdev");
-		if (ret)
-			return log_msg_ret("bootdev", ret);
+		if (ret) {
+			log_err("bootdev: returning err=%d\n", ret);
+			goto free_id;
+		}
 
 		ret = blk_probe_or_unbind(ns_udev);
 		if (ret)
@@ -924,6 +944,8 @@ int nvme_init(struct udevice *udev)
 
 free_id:
 	free(id);
+free_prp_pool:
+	free((void *)ndev->prp_pool);
 free_queue:
 	free((void *)ndev->queues);
 free_nvme:

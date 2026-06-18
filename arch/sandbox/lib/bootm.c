@@ -4,7 +4,7 @@
  * Copyright (c) 2015 Sjoerd Simons <sjoerd.simons@collabora.co.uk>
  */
 
-#include <common.h>
+#include <bootm.h>
 #include <bootstage.h>
 #include <image.h>
 #include <asm/io.h>
@@ -64,17 +64,29 @@ static int boot_prep_linux(struct bootm_headers *images)
 	return 0;
 }
 
-int do_bootm_linux(int flag, int argc, char *argv[], struct bootm_headers *images)
+int do_bootm_linux(int flag, struct bootm_info *bmi)
 {
+	struct bootm_headers *images = bmi->images;
+
 	if (flag & BOOTM_STATE_OS_PREP)
 		return boot_prep_linux(images);
 
 	if (flag & (BOOTM_STATE_OS_GO | BOOTM_STATE_OS_FAKE_GO)) {
 		bootstage_mark(BOOTSTAGE_ID_RUN_OS);
+		bootm_final(flag);
 		printf("## Transferring control to Linux (at address %08lx)...\n",
 		       images->ep);
 		printf("sandbox: continuing, as we cannot run Linux\n");
 	}
 
 	return 0;
+}
+
+/* used for testing 'booti' command */
+int booti_setup(ulong image, ulong *relocated_addr, ulong *size,
+		bool force_reloc)
+{
+	log_err("Booting is not supported on the sandbox.\n");
+
+	return 1;
 }

@@ -7,7 +7,6 @@
  * Copyright 2021 Collabora Ltd.
  */
 
-#include <common.h>
 #include <errno.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -18,8 +17,6 @@
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm-generic/gpio.h>
 #include <linux/delay.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static void setup_fec(void)
 {

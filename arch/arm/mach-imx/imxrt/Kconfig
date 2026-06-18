@@ -2,6 +2,7 @@ if ARCH_IMXRT
 
 config IMXRT
 	bool
+	select BINMAN
 	select SYS_FSL_ERRATUM_ESDHC135
 
 config IMXRT1020
@@ -37,8 +38,8 @@ config TARGET_IMXRT1170_EVK
 
 endchoice
 
-source "board/freescale/imxrt1020-evk/Kconfig"
-source "board/freescale/imxrt1050-evk/Kconfig"
-source "board/freescale/imxrt1170-evk/Kconfig"
+source "board/nxp/imxrt1020-evk/Kconfig"
+source "board/nxp/imxrt1050-evk/Kconfig"
+source "board/nxp/imxrt1170-evk/Kconfig"
 
 endif

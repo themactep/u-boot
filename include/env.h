@@ -9,6 +9,7 @@
 #ifndef __ENV_H
 #define __ENV_H
 
+#include <config.h>
 #include <compiler.h>
 #include <stdbool.h>
 #include <linux/types.h>
@@ -44,7 +45,7 @@ struct env_clbk_tbl {
  * For SPL these are silently dropped to reduce code size, since environment
  * callbacks are not supported with SPL.
  */
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_XPL_BUILD
 #define U_BOOT_ENV_CALLBACK(name, callback) \
 	static inline __maybe_unused void _u_boot_env_noop_##name(void) \
 	{ \
@@ -71,6 +72,14 @@ enum env_redund_flags {
  * Return: environment ID
  */
 int env_get_id(void);
+
+/**
+ * env_inc_id() - Increase the sequence number for the environment
+ *
+ * Increment the value that is used by env_get_id() to inform callers
+ * if the environment has changed since they last checked.
+ */
+void env_inc_id(void);
 
 /**
  * env_init() - Set up the pre-relocation environment
@@ -151,6 +160,25 @@ bool env_get_autostart(void);
  * Return: 0 if OK, 1 on error
  */
 int env_set(const char *varname, const char *value);
+
+/**
+ * env_set_runtime() - set an environment variable if
+ * CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG is set.
+ *
+ * This is equivalent to env_set(), but does nothing if
+ * CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG is unset.
+ *
+ * @varname: Variable to adjust
+ * @value: Value to set for the variable, or NULL or "" to delete the variable
+ * @return 0 if OK or !CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG, 1 on error
+ */
+static inline int env_set_runtime(const char *varname, const char *value)
+{
+	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG))
+		return env_set(varname, value);
+
+	return 0;
+}
 
 /**
  * env_get_ulong() - Return an environment variable as an integer value
@@ -347,6 +375,16 @@ int env_import_redund(const char *buf1, int buf1_read_fail,
  * Return: value if found, NULL if not found in default environment
  */
 char *env_get_default(const char *name);
+
+/**
+ * env_get_default_into() - Look up a variable from the default environment and
+ * copy its value in buf.
+ *
+ * @name: Variable to look up
+ * Return: actual length of the variable value excluding the terminating
+ *	NULL-byte, or -1 if the variable is not found
+ */
+int env_get_default_into(const char *name, char *buf, unsigned int len);
 
 /* [re]set to the default environment */
 void env_set_default(const char *s, int flags);

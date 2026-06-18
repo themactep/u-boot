@@ -4,19 +4,15 @@
  * Copyright (C) 2022 Arm Ltd.
  */
 
-#include <common.h>
 #include <clk.h>
 #include <dm.h>
 #include <init.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <dm/ofnode.h>
 #include <mapmem.h>
 #include <dt-structs.h>
 #include <timer.h>
 #include <asm/io.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define SP804_TIMERX_LOAD		0x00
 #define SP804_TIMERX_VALUE		0x04
@@ -29,7 +25,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SP804_CTRL_TIMER_PRESCALE_MASK	(3U << SP804_CTRL_TIMER_PRESCALE_SHIFT)
 #define SP804_CTRL_TIMER_32BIT		(1U << 1)
 #define SP804_CTRL_ONESHOT		(1U << 0)
-
 
 struct sp804_timer_plat {
 	uintptr_t base;

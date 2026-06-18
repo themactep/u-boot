@@ -7,15 +7,13 @@
  * (c) Copyright 2008 Renesas Solutions Corp.
  */
 
-#include <common.h>
+#include <config.h>
+#include <bootm.h>
 #include <command.h>
 #include <env.h>
 #include <image.h>
 #include <asm/byteorder.h>
-#include <asm/global_data.h>
 #include <asm/zimage.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef CONFIG_SH_SDRAM_OFFSET
 #define GET_INITRD_START(initrd, linux) (initrd - linux + CONFIG_SH_SDRAM_OFFSET)
@@ -39,9 +37,10 @@ static unsigned long sh_check_cmd_arg(char *cmdline, char *key, int base)
 	return val;
 }
 
-int do_bootm_linux(int flag, int argc, char *const argv[],
-		   struct bootm_headers *images)
+int do_bootm_linux(int flag, struct bootm_info *bmi)
 {
+	struct bootm_headers *images = bmi->images;
+
 	/* Linux kernel load address */
 	void (*kernel) (void) = (void (*)(void))images->ep;
 	/* empty_zero_page */
@@ -93,22 +92,11 @@ int do_bootm_linux(int flag, int argc, char *const argv[],
 			images->rd_end - images->rd_start);
 	}
 
+	bootm_final(0);
+
 	/* Boot kernel */
 	kernel();
 
 	/* does not return */
 	return 1;
-}
-
-static ulong get_sp(void)
-{
-	ulong ret;
-
-	asm("mov r15, %0" : "=r"(ret) : );
-	return ret;
-}
-
-void arch_lmb_reserve(struct lmb *lmb)
-{
-	arch_lmb_reserve_generic(lmb, get_sp(), gd->ram_top, 4096);
 }

@@ -8,13 +8,10 @@
  * This works only, if the PMIC is not connected to a battery.
  */
 
-#include <common.h>
 #include <bootcount.h>
 #include <dm.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define PFUZE_BC_MAGIC 0xdead
 

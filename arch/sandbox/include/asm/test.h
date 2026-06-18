@@ -49,6 +49,10 @@ struct unit_test_state;
 #define PCI_EA_BAR2_MAGIC		0x72727272
 #define PCI_EA_BAR4_MAGIC		0x74747474
 
+/* Used by the sandbox iommu driver */
+#define SANDBOX_IOMMU_DVA_ADDR		0x89abc000
+#define SANDBOX_IOMMU_PAGE_SIZE		SZ_4K
+
 enum {
 	SANDBOX_IRQN_PEND = 1,	/* Interrupt number for 'pending' test */
 };
@@ -238,6 +242,14 @@ uint sandbox_spi_get_speed(struct udevice *dev);
  * Return: current mode
  */
 uint sandbox_spi_get_mode(struct udevice *dev);
+
+/**
+ * sandbox_spi_get_wordlen() - Get current wordlen setting of a sandbox spi slave
+ *
+ * @dev: Device to check
+ * Return: current wordlen
+ */
+uint sandbox_spi_get_wordlen(struct udevice *dev);
 
 /**
  * sandbox_get_pch_spi_protect() - Get the PCI SPI protection status

@@ -5,7 +5,6 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/global_data.h>
 #include <asm/mach-imx/boot_mode.h>
-#include <common.h>
 #include <env.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -14,11 +13,6 @@ int dram_init(void)
 {
 	gd->ram_size = imx_ddr_size();
 
-	return 0;
-}
-
-int board_early_init_f(void)
-{
 	return 0;
 }
 

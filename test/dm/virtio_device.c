@@ -3,7 +3,6 @@
  * Copyright (C) 2018, Bin Meng <bmeng.cn@gmail.com>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <virtio_types.h>
 #include <virtio.h>
@@ -41,11 +40,12 @@ static int dm_test_virtio_base(struct unit_test_state *uts)
 	ut_assertok(virtio_get_status(dev, &status));
 	ut_asserteq(VIRTIO_CONFIG_S_DRIVER |
 		    VIRTIO_CONFIG_S_DRIVER_OK |
+		    VIRTIO_CONFIG_S_ACKNOWLEDGE |
 		    VIRTIO_CONFIG_S_FEATURES_OK, status);
 
 	return 0;
 }
-DM_TEST(dm_test_virtio_base, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_virtio_base, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 
 /* Test all of the virtio uclass ops */
 static int dm_test_virtio_all_ops(struct unit_test_state *uts)
@@ -94,7 +94,7 @@ static int dm_test_virtio_all_ops(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_virtio_all_ops, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_virtio_all_ops, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 
 /* Test removal of virtio device driver */
 static int dm_test_virtio_remove(struct unit_test_state *uts)
@@ -123,7 +123,7 @@ static int dm_test_virtio_remove(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_virtio_remove, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_virtio_remove, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 
 /* Test all of the virtio ring */
 static int dm_test_virtio_ring(struct unit_test_state *uts)
@@ -195,4 +195,4 @@ static int dm_test_virtio_ring(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_virtio_ring, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_virtio_ring, UTF_SCAN_PDATA | UTF_SCAN_FDT);

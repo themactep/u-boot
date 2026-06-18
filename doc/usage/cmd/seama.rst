@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: seama (command)
+
 seama command
 =============
 
@@ -53,8 +56,5 @@ The command is available if CONFIG_CMD_SEAMA=y.
 Return value
 ------------
 
-The return value $? is set 0 (true) if the loading is succefull, and
-is set to 1 (false) in case of error.
-
-The environment variable $seama_image_size is set to the size of the
-loaded SEAMA image.
+Along with the general rules for setting $?, the environment variable
+$seama_image_size is set to the size of the loaded SEAMA image.

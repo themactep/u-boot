@@ -3,19 +3,15 @@
  * Copyright (C) 2022 Ventana Micro Systems Inc.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <errno.h>
 #include <fdtdec.h>
 #include <log.h>
 #include <watchdog.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/compiler.h>
 #include <serial.h>
 #include <linux/err.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define HTIF_DATA_BITS		48
 #define HTIF_DATA_MASK		((1ULL << HTIF_DATA_BITS) - 1)

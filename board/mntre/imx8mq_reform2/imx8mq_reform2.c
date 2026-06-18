@@ -4,12 +4,10 @@
  * Copyright (C) 2018, Boundary Devices <info@boundarydevices.com>
  */
 
-#include <common.h>
 #include <env.h>
 #include <init.h>
 #include <malloc.h>
 #include <errno.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -27,15 +25,11 @@
 #include <linux/delay.h>
 #include <power/pmic.h>
 
-DECLARE_GLOBAL_DATA_PTR;
-
-
 #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE)
 
 static iomux_v3_cfg_t const wdog_pads[] = {
 	IMX8MQ_PAD_GPIO1_IO02__WDOG1_WDOG_B | MUX_PAD_CTRL(WDOG_PAD_CTRL),
 };
-
 
 int board_early_init_f(void)
 {

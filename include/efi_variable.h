@@ -8,7 +8,7 @@
 
 #include <linux/bitops.h>
 
-#define EFI_VARIABLE_READ_ONLY BIT(31)
+#define EFI_VARIABLE_READ_ONLY 0x80000000
 
 enum efi_auth_var_type {
 	EFI_AUTH_VAR_NONE = 0,
@@ -38,7 +38,7 @@ efi_status_t efi_get_variable_int(const u16 *variable_name,
 				  void *data, u64 *timep);
 
 /**
- * efi_set_variable() - set value of a UEFI variable
+ * efi_set_variable_int() - set value of a UEFI variable
  *
  * @variable_name:	name of the variable
  * @vendor:		vendor GUID
@@ -137,13 +137,11 @@ struct efi_var_file {
 };
 
 /**
- * efi_var_to_file() - save non-volatile variables as file
- *
- * File ubootefi.var is created on the EFI system partion.
+ * efi_var_to_storage() - save non-volatile variables
  *
  * Return:	status code
  */
-efi_status_t efi_var_to_file(void);
+efi_status_t efi_var_to_storage(void);
 
 /**
  * efi_var_collect() - collect variables in buffer
@@ -161,6 +159,11 @@ efi_status_t efi_var_to_file(void);
 efi_status_t __maybe_unused efi_var_collect(struct efi_var_file **bufp, loff_t *lenp,
 					    u32 check_attr_mask);
 
+/* GUID used by Shim to store the MOK database */
+#define SHIM_LOCK_GUID \
+	EFI_GUID(0x605dab50, 0xe046, 0x4300, \
+		 0xab, 0xb6, 0x3d, 0xd8, 0x10, 0xdd, 0x8b, 0x23)
+
 /**
  * efi_var_restore() - restore EFI variables from buffer
  *
@@ -173,17 +176,14 @@ efi_status_t __maybe_unused efi_var_collect(struct efi_var_file **bufp, loff_t *
 efi_status_t efi_var_restore(struct efi_var_file *buf, bool safe);
 
 /**
- * efi_var_from_file() - read variables from file
- *
- * File ubootefi.var is read from the EFI system partitions and the variables
- * stored in the file are created.
+ * efi_var_from_storage() - read variables
  *
  * In case the file does not exist yet or a variable cannot be set EFI_SUCCESS
  * is returned.
  *
  * Return:	status code
  */
-efi_status_t efi_var_from_file(void);
+efi_status_t efi_var_from_storage(void);
 
 /**
  * efi_var_mem_init() - set-up variable list
@@ -216,6 +216,11 @@ void efi_var_mem_del(struct efi_var_entry *var);
  * The variable is appended without checking if a variable of the same name
  * already exists. The two data buffers are concatenated.
  *
+ * When @changep is non-NULL and @size2 is 0, the function compares the new
+ * value against an existing variable with the same name and vendor. If
+ * attributes and data are identical the insertion is skipped and *@changep
+ * is set to false, avoiding superfluous writes.
+ *
  * @variable_name:	variable name
  * @vendor:		GUID
  * @attributes:		variable attributes
@@ -224,13 +229,14 @@ void efi_var_mem_del(struct efi_var_entry *var);
  * @size2:		size of the second data field
  * @data2:		second data buffer
  * @time:		time of authentication (as seconds since start of epoch)
+ * @changep:		pointer to change flag (may be NULL)
  * Result:		status code
  */
 efi_status_t efi_var_mem_ins(const u16 *variable_name,
 			     const efi_guid_t *vendor, u32 attributes,
 			     const efi_uintn_t size1, const void *data1,
 			     const efi_uintn_t size2, const void *data2,
-			     const u64 time);
+			     const u64 time, bool *changep);
 
 /**
  * efi_var_mem_free() - determine free memory for variables
@@ -271,13 +277,16 @@ const efi_guid_t *efi_auth_var_get_guid(const u16 *name);
  *
  * @variable_name_size:	size of variable_name buffer in bytes
  * @variable_name:	name of uefi variable's name in u16
+ * @mask:		bitmask with required attributes of variables to be collected.
+ *                      variables are only collected if all of the required
+ *                      attributes match. Use 0 to skip matching
  * @vendor:		vendor's guid
  *
  * Return: status code
  */
 efi_status_t __efi_runtime
 efi_get_next_variable_name_mem(efi_uintn_t *variable_name_size, u16 *variable_name,
-			       efi_guid_t *vendor);
+			       efi_guid_t *vendor, u32 mask);
 /**
  * efi_get_variable_mem() - Runtime common code across efi variable
  *                          implementations for GetVariable() from
@@ -289,12 +298,15 @@ efi_get_next_variable_name_mem(efi_uintn_t *variable_name_size, u16 *variable_na
  * @data_size:		size of the buffer to which the variable value is copied
  * @data:		buffer to which the variable value is copied
  * @timep:		authentication time (seconds since start of epoch)
+ * @mask:		bitmask with required attributes of variables to be collected.
+ *                      variables are only collected if all of the required
+ *                      attributes match. Use 0 to skip matching
  * Return:		status code
  */
 efi_status_t __efi_runtime
 efi_get_variable_mem(const u16 *variable_name, const efi_guid_t *vendor,
 		     u32 *attributes, efi_uintn_t *data_size, void *data,
-		     u64 *timep);
+		     u64 *timep, u32 mask);
 
 /**
  * efi_get_variable_runtime() - runtime implementation of GetVariable()
@@ -333,5 +345,11 @@ efi_get_next_variable_name_runtime(efi_uintn_t *variable_name_size,
  * at runtime to fill the buffer.
  */
 void efi_var_buf_update(struct efi_var_file *var_buf);
+
+efi_status_t __efi_runtime efi_var_collect_mem(struct efi_var_file *buf,
+					       efi_uintn_t *lenp,
+					       u32 check_attr_mask);
+
+u32 efi_var_entry_len(struct efi_var_entry *var);
 
 #endif

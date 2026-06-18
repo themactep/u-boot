@@ -5,17 +5,13 @@
  */
 
 #include <clk.h>
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <malloc.h>
 #include <asm/arch/clock_manager.h>
 #include <asm/arch/system_manager.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <dt-bindings/clock/agilex-clock.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static ulong cm_get_rate_dm(u32 id)
 {
@@ -36,8 +32,6 @@ static ulong cm_get_rate_dm(u32 id)
 		return 0;
 
 	rate = clk_get_rate(&clk);
-
-	clk_free(&clk);
 
 	if ((rate == (unsigned long)-ENOSYS) ||
 	    (rate == (unsigned long)-ENXIO) ||

@@ -3,7 +3,6 @@
  * Copyright (C) 2013 Google, Inc
  */
 
-#include <common.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <spi.h>
@@ -90,7 +89,7 @@ static int dm_test_spi_find(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_spi_find, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_spi_find, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 
 /* dm_test_spi_switch_slaves - Helper function to check whether spi_claim_bus
  *                             operates correctly with two spi slaves.
@@ -169,7 +168,23 @@ static int dm_test_spi_claim_bus(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_spi_claim_bus, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_spi_claim_bus, UTF_SCAN_PDATA | UTF_SCAN_FDT);
+
+static int dm_test_spi_set_wordlen(struct unit_test_state *uts)
+{
+	struct spi_slave *slave;
+	struct udevice *bus;
+	const int busnum = 0, cs = 0;
+
+	ut_assertok(spi_get_bus_and_cs(busnum, cs, &bus, &slave));
+	ut_assertok(spi_set_wordlen(slave, 8));
+	ut_asserteq(8, sandbox_spi_get_wordlen(slave->dev));
+	ut_assertok(spi_set_wordlen(slave, 9));
+	ut_asserteq(9, sandbox_spi_get_wordlen(slave->dev));
+
+	return 0;
+}
+DM_TEST(dm_test_spi_set_wordlen, UTF_SCAN_PDATA | UTF_SCAN_FDT);
 
 /* Test that sandbox SPI works correctly */
 static int dm_test_spi_xfer(struct unit_test_state *uts)
@@ -200,4 +215,4 @@ static int dm_test_spi_xfer(struct unit_test_state *uts)
 
 	return 0;
 }
-DM_TEST(dm_test_spi_xfer, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_spi_xfer, UTF_SCAN_PDATA | UTF_SCAN_FDT);

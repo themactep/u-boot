@@ -37,7 +37,7 @@ with open(os.path.join(srcdir, "../README"), "r") as fh:
     long_description = fh.read()
 
 # Decodes a Makefile assignment line into key and value (and plus for +=)
-RE_KEY_VALUE = re.compile('(?P<key>\w+) *(?P<plus>[+])?= *(?P<value>.*)$')
+RE_KEY_VALUE = re.compile(r'(?P<key>\w+) *(?P<plus>[+])?= *(?P<value>.*)$')
 
 def get_top_builddir():
     if '--top-builddir' in sys.argv:
@@ -157,13 +157,10 @@ setup(
     long_description=long_description,
     long_description_content_type="text/plain",
     url="https://git.kernel.org/pub/scm/utils/dtc/dtc.git",
-    license="BSD",
-    license_files=["GPL", "BSD-2-Clause"],
+    license="GPL-2.0-or-later OR BSD-2-Clause",
 
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: BSD License",
-        "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
         "Operating System :: OS Independent",
     ],
 

@@ -7,3 +7,6 @@ Samsung
    :maxdepth: 2
 
    axy17lte
+   e850-96
+   exynos-mobile
+   n1

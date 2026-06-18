@@ -4,7 +4,7 @@
  *
  */
 
-#include <common.h>
+#include <config.h>
 #include <hang.h>
 #include <init.h>
 #include <asm/arch/ddr.h>
@@ -17,8 +17,6 @@
 #include <fsl_esdhc_imx.h>
 #include <linux/delay.h>
 #include <spl.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static void spl_dram_init(void)
 {
@@ -134,9 +132,6 @@ void spl_board_init(void)
 void board_init_f(ulong dummy)
 {
 	int ret;
-
-	/* Clear global data */
-	memset((void *)gd, 0, sizeof(gd_t));
 
 	arch_cpu_init();
 

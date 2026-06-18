@@ -3,12 +3,10 @@
  * Copyright 2018 NXP
  */
 
-#include <common.h>
 #include <env.h>
 #include <init.h>
 #include <malloc.h>
 #include <errno.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -24,8 +22,6 @@
 #include <linux/delay.h>
 #include <spl.h>
 #include <power/pmic.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
 

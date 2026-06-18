@@ -3,7 +3,6 @@
  * Copyright 2018 NXP
  */
 
-#include <common.h>
 #include <binman_sym.h>
 #include <log.h>
 #include <spl.h>
@@ -39,6 +38,8 @@ binman_sym_declare(ulong, ddr_2d_dmem_fw, image_pos);
 binman_sym_declare(ulong, ddr_2d_dmem_fw, size);
 #endif
 
+binman_sym_declare(ulong, u_boot_spl, image_pos);
+
 /* We need PHY iMEM PHY is 32KB padded */
 void ddr_load_train_firmware(enum fw_type type)
 {
@@ -49,6 +50,14 @@ void ddr_load_train_firmware(enum fw_type type)
 	unsigned long imem_start = (unsigned long)_end + fw_offset;
 	unsigned long dmem_start;
 	unsigned long imem_len = IMEM_LEN, dmem_len = DMEM_LEN;
+	static enum fw_type last_type = -1;
+	unsigned long spl_start = 0;
+
+	/* If FW doesn't change, we can save the loading. */
+	if (last_type == type)
+		return;
+
+	last_type = type;
 
 #ifdef CONFIG_SPL_OF_CONTROL
 	if (gd->fdt_blob && !fdt_check_header(gd->fdt_blob)) {
@@ -61,6 +70,9 @@ void ddr_load_train_firmware(enum fw_type type)
 	dmem_start = imem_start + imem_len;
 
 	if (BINMAN_SYMS_OK) {
+		if (IS_ENABLED(CONFIG_IMX8MQ))
+			spl_start = binman_sym(ulong, u_boot_spl, image_pos);
+
 		switch (type) {
 		case FW_1D_IMAGE:
 			imem_start = binman_sym(ulong, ddr_1d_imem_fw, image_pos);
@@ -76,6 +88,13 @@ void ddr_load_train_firmware(enum fw_type type)
 			dmem_len = binman_sym(ulong, ddr_2d_dmem_fw, size);
 #endif
 			break;
+		}
+
+		if (IS_ENABLED(CONFIG_IMX8MQ)) {
+			imem_start -= spl_start;
+			imem_start += CONFIG_SPL_TEXT_BASE;
+			dmem_start -= spl_start;
+			dmem_start += CONFIG_SPL_TEXT_BASE;
 		}
 	}
 
@@ -175,7 +194,7 @@ void *dram_config_save(struct dram_timing_info *timing_info, unsigned long saved
 
 	saved_timing->ddrc_cfg_num = timing_info->ddrc_cfg_num;
 	saved_timing->ddrphy_cfg_num = timing_info->ddrphy_cfg_num;
-	saved_timing->ddrphy_trained_csr_num = ddrphy_trained_csr_num;
+	saved_timing->ddrphy_trained_csr_num = timing_info->ddrphy_trained_csr_num;
 	saved_timing->ddrphy_pie_num = timing_info->ddrphy_pie_num;
 
 	/* save the fsp table */
@@ -203,9 +222,9 @@ void *dram_config_save(struct dram_timing_info *timing_info, unsigned long saved
 
 	/* save the ddrphy csr */
 	saved_timing->ddrphy_trained_csr = cfg;
-	for (i = 0; i < ddrphy_trained_csr_num; i++) {
-		cfg->reg = ddrphy_trained_csr[i].reg;
-		cfg->val = ddrphy_trained_csr[i].val;
+	for (i = 0; i < timing_info->ddrphy_trained_csr_num; i++) {
+		cfg->reg = timing_info->ddrphy_trained_csr[i].reg;
+		cfg->val = timing_info->ddrphy_trained_csr[i].val;
 		cfg++;
 	}
 

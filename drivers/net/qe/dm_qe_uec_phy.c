@@ -8,7 +8,6 @@
  * Copyright (C) 2020 Heiko Schocher <hs@denx.de>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <errno.h>
 #include <miiphy.h>
@@ -153,7 +152,7 @@ static const struct udevice_id qe_uec_mdio_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(mvmdio) = {
+U_BOOT_DRIVER(qe_uec_mdio) = {
 	.name			= "qe_uec_mdio",
 	.id			= UCLASS_MDIO,
 	.of_match		= qe_uec_mdio_ids,

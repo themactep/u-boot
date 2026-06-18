@@ -4,17 +4,13 @@
  *
  */
 
-#include <common.h>
 #include <asm/arch/clock_manager.h>
 #include <asm/arch/system_manager.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <clk.h>
 #include <dm.h>
 #include <dt-bindings/clock/n5x-clock.h>
 #include <malloc.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static ulong cm_get_rate_dm(u32 id)
 {
@@ -35,8 +31,6 @@ static ulong cm_get_rate_dm(u32 id)
 		return 0;
 
 	rate = clk_get_rate(&clk);
-
-	clk_free(&clk);
 
 	if ((rate == (unsigned long)-ENXIO) ||
 	    (rate == (unsigned long)-EIO)) {

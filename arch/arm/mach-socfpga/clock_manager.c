@@ -3,7 +3,6 @@
  *  Copyright (C) 2013-2017 Altera Corporation <www.altera.com>
  */
 
-#include <common.h>
 #include <asm/arch/clock_manager.h>
 #include <asm/arch/system_manager.h>
 #include <asm/global_data.h>
@@ -19,7 +18,7 @@ void cm_wait_for_lock(u32 mask)
 	u32 inter_val;
 	u32 retry = 0;
 	do {
-#if defined(CONFIG_TARGET_SOCFPGA_GEN5)
+#if defined(CONFIG_ARCH_SOCFPGA_GEN5)
 		inter_val = readl(socfpga_get_clkmgr_addr() +
 				  CLKMGR_INTER) & mask;
 #else
@@ -46,7 +45,7 @@ int cm_wait_for_fsm(void)
 
 int set_cpu_clk_info(void)
 {
-#if defined(CONFIG_TARGET_SOCFPGA_GEN5)
+#if defined(CONFIG_ARCH_SOCFPGA_GEN5)
 	/* Calculate the clock frequencies required for drivers */
 	cm_get_l4_sp_clk_hz();
 	cm_get_mmc_controller_clk_hz();
@@ -55,7 +54,7 @@ int set_cpu_clk_info(void)
 	gd->bd->bi_arm_freq = cm_get_mpu_clk_hz() / 1000000;
 	gd->bd->bi_dsp_freq = 0;
 
-#if defined(CONFIG_TARGET_SOCFPGA_GEN5)
+#if defined(CONFIG_ARCH_SOCFPGA_GEN5)
 	gd->bd->bi_ddr_freq = cm_get_sdram_clk_hz() / 1000000;
 #else
 	gd->bd->bi_ddr_freq = 0;
@@ -64,7 +63,7 @@ int set_cpu_clk_info(void)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_TARGET_SOCFPGA_SOC64)
+#if IS_ENABLED(CONFIG_ARCH_SOCFPGA_SOC64)
 int cm_set_qspi_controller_clk_hz(u32 clk_hz)
 {
 	u32 reg;
@@ -100,7 +99,7 @@ unsigned int cm_get_qspi_controller_clk_hz(void)
 }
 #endif
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_XPL_BUILD
 static int do_showclocks(struct cmd_tbl *cmdtp, int flag, int argc,
 			 char *const argv[])
 {

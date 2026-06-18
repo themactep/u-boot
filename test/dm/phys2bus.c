@@ -3,7 +3,6 @@
  * Copyright (c) 2020 Nicolas Saenz Julienne <nsaenzjulienne@suse.de>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <mapmem.h>
 #include <phys2bus.h>
@@ -29,9 +28,9 @@ static int dm_test_phys_to_bus(struct unit_test_state *uts)
 	node = ofnode_path("/mmio-bus@0/subnode@0");
 	ut_assert(ofnode_valid(node));
 	ut_assertok(uclass_get_device_by_ofnode(UCLASS_TEST_FDT, node, &dev));
-	ut_asserteq_addr((void*)0x100fffffULL, (void*)dev_phys_to_bus(dev, 0xfffff));
-	ut_asserteq_addr((void*)0xfffffULL, (void*)(ulong)dev_bus_to_phys(dev, 0x100fffff));
+	ut_asserteq_addr((void*)0x1003ffffULL, (void*)dev_phys_to_bus(dev, 0x3ffff));
+	ut_asserteq_addr((void*)0x3ffffULL, (void*)(ulong)dev_bus_to_phys(dev, 0x1003ffff));
 
 	return 0;
 }
-DM_TEST(dm_test_phys_to_bus, UT_TESTF_SCAN_PDATA | UT_TESTF_SCAN_FDT);
+DM_TEST(dm_test_phys_to_bus, UTF_SCAN_PDATA | UTF_SCAN_FDT);

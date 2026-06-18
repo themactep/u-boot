@@ -6,7 +6,6 @@
  * Written by Simon Glass <sjg@chromium.org>
  */
 
-#include <common.h>
 #include <bootdev.h>
 #include <bootflow.h>
 #include <bootm.h>
@@ -14,6 +13,9 @@
 #include <command.h>
 #include <console.h>
 #include <dm.h>
+#include <env.h>
+#include <expo.h>
+#include <log.h>
 #include <mapmem.h>
 
 /**
@@ -105,24 +107,39 @@ __maybe_unused static int bootflow_handle_menu(struct bootstd_priv *std,
 					       bool text_mode,
 					       struct bootflow **bflowp)
 {
+	struct expo *exp;
 	struct bootflow *bflow;
-	int ret;
+	int ret, seq;
 
-	ret = bootflow_menu_run(std, text_mode, &bflow);
-	if (ret) {
-		if (ret == -EAGAIN) {
-			printf("Nothing chosen\n");
-			std->cur_bootflow = NULL;
-		} else {
-			printf("Menu failed (err=%d)\n", ret);
+	ret = bootflow_menu_start(std, text_mode, &exp);
+	if (ret)
+		return log_msg_ret("bhs", ret);
+
+	ret = -ERESTART;
+	do {
+		if (ret == -ERESTART) {
+			ret = expo_render(exp);
+			if (ret)
+				return log_msg_ret("bhr", ret);
 		}
+		ret = bootflow_menu_poll(exp, &seq);
+	} while (ret == -EAGAIN || ret == -ERESTART);
 
-		return ret;
+	if (ret == -EPIPE) {
+		printf("Nothing chosen\n");
+		std->cur_bootflow = NULL;
+	} else if (ret) {
+		printf("Menu failed (err=%d)\n", ret);
+	} else {
+		bflow = alist_getw(&std->bootflows, seq, struct bootflow);
+		printf("Selected: %s\n", bflow->os_name ? bflow->os_name :
+		       bflow->name);
+		std->cur_bootflow = bflow;
+		*bflowp = bflow;
 	}
-
-	printf("Selected: %s\n", bflow->os_name ? bflow->os_name : bflow->name);
-	std->cur_bootflow = bflow;
-	*bflowp = bflow;
+	expo_destroy(exp);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -135,7 +152,7 @@ static int do_bootflow_scan(struct cmd_tbl *cmdtp, int flag, int argc,
 	struct udevice *dev = NULL;
 	struct bootflow bflow;
 	bool all = false, boot = false, errors = false, no_global = false;
-	bool list = false, no_hunter = false;
+	bool list = false, no_hunter = false, menu = false, text_mode = false;
 	int num_valid = 0;
 	const char *label = NULL;
 	bool has_args;
@@ -155,6 +172,8 @@ static int do_bootflow_scan(struct cmd_tbl *cmdtp, int flag, int argc,
 			no_global = strchr(argv[1], 'G');
 			list = strchr(argv[1], 'l');
 			no_hunter = strchr(argv[1], 'H');
+			menu = strchr(argv[1], 'm');
+			text_mode = strchr(argv[1], 't');
 			argc--;
 			argv++;
 		}
@@ -172,7 +191,7 @@ static int do_bootflow_scan(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	std->cur_bootflow = NULL;
 
-	flags = 0;
+	flags = BOOTFLOWIF_ONLY_BOOTABLE;
 	if (list)
 		flags |= BOOTFLOWIF_SHOW;
 	if (all)
@@ -196,7 +215,7 @@ static int do_bootflow_scan(struct cmd_tbl *cmdtp, int flag, int argc,
 		show_header();
 	}
 	if (dev)
-		bootdev_clear_bootflows(dev);
+		bootstd_clear_bootflows_for_bootdev(dev);
 	else
 		bootstd_clear_glob();
 	for (i = 0,
@@ -206,22 +225,39 @@ static int do_bootflow_scan(struct cmd_tbl *cmdtp, int flag, int argc,
 		bflow.err = ret;
 		if (!ret)
 			num_valid++;
-		ret = bootdev_add_bootflow(&bflow);
-		if (ret) {
+		ret = bootstd_add_bootflow(&bflow);
+		if (ret < 0) {
 			printf("Out of memory\n");
 			return CMD_RET_FAILURE;
 		}
 		if (list)
 			show_bootflow(i, &bflow, errors);
-		if (boot && !bflow.err)
+		if (!menu && boot && !bflow.err)
 			bootflow_run_boot(&iter, &bflow);
 	}
 	bootflow_iter_uninit(&iter);
 	if (list)
 		show_footer(i, num_valid);
 
-	if (IS_ENABLED(CONFIG_CMD_BOOTFLOW_FULL) && !num_valid && !list)
-		printf("No bootflows found; try again with -l\n");
+	if (IS_ENABLED(CONFIG_CMD_BOOTFLOW_FULL) && IS_ENABLED(CONFIG_EXPO)) {
+		if (!num_valid && !list) {
+			printf("No bootflows found; try again with -l\n");
+		} else if (menu) {
+			struct bootflow *sel_bflow;
+
+			ret = bootflow_handle_menu(std, text_mode, &sel_bflow);
+			if (!ret && boot) {
+				ret = console_clear();
+				if (ret) {
+					log_err("Failed to clear console: %dE\n",
+						ret);
+					return ret;
+				}
+
+				bootflow_run_boot(NULL, sel_bflow);
+			}
+		}
+	}
 
 	return 0;
 }
@@ -368,14 +404,18 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 	}
 
 	printf("Name:      %s\n", bflow->name);
-	printf("Device:    %s\n", bflow->dev->name);
+	printf("Device:    %s\n", bflow->dev ? bflow->dev->name : "(none)");
 	printf("Block dev: %s\n", bflow->blk ? bflow->blk->name : "(none)");
 	printf("Method:    %s\n", bflow->method->name);
 	printf("State:     %s\n", bootflow_state_get_name(bflow->state));
 	printf("Partition: %d\n", bflow->part);
 	printf("Subdir:    %s\n", bflow->subdir ? bflow->subdir : "(none)");
 	printf("Filename:  %s\n", bflow->fname);
-	printf("Buffer:    %lx\n", (ulong)map_to_sysmem(bflow->buf));
+	printf("Buffer:    ");
+	if (bflow->buf)
+		printf("%lx\n", (ulong)map_to_sysmem(bflow->buf));
+	else
+		printf("(not loaded)\n");
 	printf("Size:      %x (%d bytes)\n", bflow->size, bflow->size);
 	printf("OS:        %s\n", bflow->os_name ? bflow->os_name : "(none)");
 	printf("Cmdline:   ");
@@ -385,7 +425,8 @@ static int do_bootflow_info(struct cmd_tbl *cmdtp, int flag, int argc,
 		puts("(none)");
 	putc('\n');
 	if (bflow->x86_setup)
-		printf("X86 setup: %p\n", bflow->x86_setup);
+		printf("X86 setup: %lx\n",
+		       (ulong)map_to_sysmem(bflow->x86_setup));
 	printf("Logo:      %s\n", bflow->logo ?
 	       simple_xtoa((ulong)map_to_sysmem(bflow->logo)) : "(none)");
 	if (bflow->logo) {
@@ -524,9 +565,7 @@ static int do_bootflow_cmdline(struct cmd_tbl *cmdtp, int flag, int argc,
 	op = argv[1];
 	arg = argv[2];
 	if (*op == 's') {
-		if (argc < 4)
-			return CMD_RET_USAGE;
-		val = argv[3];
+		val = argv[3] ?: (const char *)BOOTFLOWCL_EMPTY;
 	}
 
 	switch (*op) {

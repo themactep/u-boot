@@ -7,9 +7,7 @@
 #define _PART_H
 
 #include <blk.h>
-#include <ide.h>
-#include <uuid.h>
-#include <linker_lists.h>
+#include <u-boot/uuid.h>
 #include <linux/errno.h>
 #include <linux/list.h>
 
@@ -30,12 +28,17 @@ struct block_drvr {
 #define PART_TYPE_ISO		0x03
 #define PART_TYPE_AMIGA		0x04
 #define PART_TYPE_EFI		0x05
+#define PART_TYPE_MTD		0x06
+#define PART_TYPE_UBI		0x07
 
 /* maximum number of partition entries supported by search */
 #define DOS_ENTRY_NUMBERS	8
 #define ISO_ENTRY_NUMBERS	64
 #define MAC_ENTRY_NUMBERS	64
 #define AMIGA_ENTRY_NUMBERS	8
+#define MTD_ENTRY_NUMBERS	64
+#define UBI_ENTRY_NUMBERS	UBI_MAX_VOLUMES
+
 /*
  * Type string for U-Boot bootable partitions
  */
@@ -69,6 +72,7 @@ struct disk_partition {
 	 * PART_EFI_SYSTEM_PARTITION	the partition is an EFI system partition
 	 */
 	int	bootable;
+	u16	type_flags;	/* top 16 bits of GPT partition attributes	*/
 #if CONFIG_IS_ENABLED(PARTITION_UUIDS)
 	char	uuid[UUID_STR_LEN + 1];	/* filesystem UUID as string, if exists	*/
 #endif
@@ -310,6 +314,20 @@ int part_get_info_by_name(struct blk_desc *desc, const char *name,
 			  struct disk_partition *info);
 
 /**
+ * part_get_info_by_uuid() - Search for a partition by uuid
+ *                           among all available registered partitions
+ *
+ * @desc:	block device descriptor
+ * @uuid:	the specified table entry uuid
+ * @info:	the disk partition info
+ *
+ * Return: the partition number on match (starting on 1), -ENOENT on no match,
+ * otherwise error
+ */
+int part_get_info_by_uuid(struct blk_desc *desc, const char *uuid,
+			  struct disk_partition *info);
+
+/**
  * part_get_info_by_dev_and_name_or_num() - Get partition info from dev number
  *					    and part name, or dev number and
  *					    part number.
@@ -380,6 +398,12 @@ static inline int part_get_info_by_name(struct blk_desc *desc, const char *name,
 	return -ENOENT;
 }
 
+static inline int part_get_info_by_uuid(struct blk_desc *desc, const char *uuid,
+					struct disk_partition *info)
+{
+	return -ENOENT;
+}
+
 static inline int
 part_get_info_by_dev_and_name_or_num(const char *dev_iface,
 				     const char *dev_part_str,
@@ -434,10 +458,12 @@ ulong disk_blk_erase(struct udevice *dev, lbaint_t start, lbaint_t blkcnt);
  * We don't support printing partition information in SPL and only support
  * getting partition information in a few cases.
  */
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_XPL_BUILD
 # define part_print_ptr(x)	NULL
 # if defined(CONFIG_SPL_FS_EXT4) || defined(CONFIG_SPL_FS_FAT) || \
-	defined(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_PARTITION)
+	defined(CONFIG_SPL_FS_SQUASHFS) || \
+	defined(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_PARTITION) || \
+	defined(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_PARTITION_TYPE)
 #  define part_get_info_ptr(x)	x
 # else
 #  define part_get_info_ptr(x)	NULL
@@ -484,6 +510,22 @@ struct part_driver {
 	 */
 	int (*test)(struct blk_desc *desc);
 };
+
+/**
+ * part_driver_get_info() - Call the part_driver's get_info method
+ *
+ * On success, string members of info are guaranteed to be properly
+ * initialized, though they may be empty.
+ *
+ * @drv:	Partition driver
+ * @desc:	Block device descriptor
+ * @part:	Partition number to read
+ * @info:	Returned partition information
+ *
+ * Return: 0 on success, negative errno on failure.
+ */
+int part_driver_get_info(struct part_driver *drv, struct blk_desc *desc, int part,
+			 struct disk_partition *info);
 
 /* Declare a new U-Boot partition 'driver' */
 #define U_BOOT_PART_TYPE(__name)					\
@@ -609,7 +651,6 @@ int gpt_verify_partitions(struct blk_desc *desc,
 			  struct disk_partition *partitions, int parts,
 			  gpt_header *gpt_head, gpt_entry **gpt_pte);
 
-
 /**
  * get_disk_guid() - Read the GUID string from a device's GPT
  *
@@ -622,6 +663,20 @@ int gpt_verify_partitions(struct blk_desc *desc,
  * Return:	0 on success, otherwise error
  */
 int get_disk_guid(struct blk_desc *desc, char *guid);
+
+/**
+ * part_get_gpt_pte() - Get the GPT partition table entry of a partition
+ *
+ * This function reads the GPT partition table entry (PTE) for a given
+ * block device and partition number.
+ *
+ * @desc:	block device descriptor
+ * @part:	partition number for which to return the PTE
+ * @gpt_e:	GPT partition table entry
+ *
+ * Return:	0 on success, otherwise error
+ */
+int part_get_gpt_pte(struct blk_desc *desc, int part, gpt_entry *gpt_e);
 
 #endif
 
@@ -649,6 +704,20 @@ int write_mbr_partitions(struct blk_desc *dev,
 		struct disk_partition *p, int count, unsigned int disksig);
 int layout_mbr_partitions(struct disk_partition *p, int count,
 			  lbaint_t total_sectors);
+
+/**
+ * part_get_mbr() - get the MBR partition record of a partition
+ *
+ * This function reads the MBR partition record for a given block
+ * device and partition number.
+ *
+ * @desc:	block device descriptor
+ * @part:	partition number for which to return the partition record
+ * @mbr:	MBR partition record
+ *
+ * Return:	0 on success, otherwise error
+ */
+int part_get_mbr(struct blk_desc *desc, int part, dos_partition_t *mbr);
 
 #endif
 
@@ -685,10 +754,28 @@ int part_get_type_by_name(const char *name);
 /**
  * part_get_bootable() - Find the first bootable partition
  *
- * @desc: Block-device descriptor
- * @return first bootable partition, or 0 if there is none
+ * @desc:	Block-device descriptor
+ * Return:	first bootable partition, or 0 if there is none
  */
 int part_get_bootable(struct blk_desc *desc);
+
+/**
+ * part_driver_lookup_type() - Look up the partition driver for a blk device
+ *
+ * If @desc->part_type is PART_TYPE_UNKNOWN, this checks each partition driver
+ * against the blk device to see if there is a valid partition table acceptable
+ * to that driver.
+ *
+ * If @desc->part_type is already set, it just returns the driver for that
+ * type, without testing if the driver can find a valid partition on the
+ * descriptor.
+ *
+ * On success it updates @desc->part_type if set to PART_TYPE_UNKNOWN on entry
+ *
+ * @desc: Device descriptor
+ * Return: Driver found, or NULL if none
+ */
+struct part_driver *part_driver_lookup_type(struct blk_desc *desc);
 
 #else
 static inline int part_driver_get_count(void)
@@ -699,6 +786,9 @@ static inline struct part_driver *part_driver_get_first(void)
 
 static inline bool part_get_bootable(struct blk_desc *desc)
 { return false; }
+
+static inline struct part_driver *part_driver_lookup_type(struct blk_desc *desc)
+{ return NULL; }
 
 #endif /* CONFIG_PARTITIONS */
 

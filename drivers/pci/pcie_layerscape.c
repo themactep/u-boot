@@ -5,9 +5,7 @@
  * Layerscape PCIe driver
  */
 
-#include <common.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <malloc.h>
@@ -16,8 +14,6 @@
 #include <asm/arch/clock.h>
 #endif
 #include "pcie_layerscape.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 LIST_HEAD(ls_pcie_list);
 

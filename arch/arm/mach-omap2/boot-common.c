@@ -7,7 +7,6 @@
  * Copyright (C) 2011, Texas Instruments, Incorporated - https://www.ti.com/
  */
 
-#include <common.h>
 #include <ahci.h>
 #include <log.h>
 #include <dm/uclass.h>
@@ -174,7 +173,7 @@ void save_omap_boot_params(void)
 #endif
 }
 
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_XPL_BUILD
 u32 spl_boot_device(void)
 {
 	return gd->arch.omap_boot_device;
@@ -190,7 +189,7 @@ int load_firmware(char *name_fw, u32 *loadaddr)
 	struct udevice *fsdev;
 	int size = 0;
 
-	if (!IS_ENABLED(CONFIG_FS_LOADER))
+	if (!CONFIG_IS_ENABLED(FS_LOADER))
 		return 0;
 
 	if (!*loadaddr)
@@ -209,7 +208,7 @@ void spl_boot_ipu(void)
 	int ret, size;
 	u32 loadaddr = IPU1_LOAD_ADDR;
 
-	if (!IS_ENABLED(CONFIG_SPL_BUILD) ||
+	if (!IS_ENABLED(CONFIG_XPL_BUILD) ||
 	    !IS_ENABLED(CONFIG_REMOTEPROC_TI_IPU))
 		return;
 
@@ -270,7 +269,7 @@ skip_ipu1:
 		debug("%s: IPU2 failed to start (%d)\n", __func__, ret);
 }
 
-void spl_board_init(void)
+void spl_soc_init(void)
 {
 	/* Prepare console output */
 	preloader_console_init();
@@ -287,15 +286,12 @@ void spl_board_init(void)
 #if defined(CONFIG_HW_WATCHDOG) || defined(CONFIG_WATCHDOG)
 	hw_watchdog_init();
 #endif
-#ifdef CONFIG_AM33XX
-	am33xx_spl_board_init();
-#endif
-	if (IS_ENABLED(CONFIG_SPL_BUILD) &&
+	if (IS_ENABLED(CONFIG_XPL_BUILD) &&
 	    IS_ENABLED(CONFIG_REMOTEPROC_TI_IPU))
 		spl_boot_ipu();
 }
 
-void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)
+void __noreturn jump_to_image(struct spl_image_info *spl_image)
 {
 	typedef void __noreturn (*image_entry_noargs_t)(u32 *);
 	image_entry_noargs_t image_entry =
@@ -306,13 +302,6 @@ void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)
 	debug("image entry point: 0x%lX\n", spl_image->entry_point);
 	/* Pass the saved boot_params from rom code */
 	image_entry((u32 *)boot_params);
-}
-#endif
-
-#ifdef CONFIG_SCSI_AHCI_PLAT
-void arch_preboot_os(void)
-{
-	ahci_reset((void __iomem *)DWC_AHSATA_BASE);
 }
 #endif
 
@@ -328,4 +317,35 @@ static void tee_image_process(ulong tee_image, size_t tee_size)
 	secure_tee_install((u32)tee_image);
 }
 U_BOOT_FIT_LOADABLE_HANDLER(IH_TYPE_TEE, tee_image_process);
+#endif
+
+#ifdef CONFIG_SPL_AM33XX_MMCSD_MULTIPLE
+
+#define AM335X_TRACE_VECTOR2 0x4030CE44
+
+unsigned long arch_spl_mmc_get_uboot_raw_sector(struct mmc *mmc, unsigned long raw_sect)
+{
+	u32 bits = *(u32 *)AM335X_TRACE_VECTOR2;
+
+	bits &= 0xf000;
+
+	/*
+	 * The ROM code sets the "trial bit 3", bit 15, first, when
+	 * attempting offset 0, then "trial bit 2", bit 14, when
+	 * attempting offset 128K, and so on. If the tracing vector
+	 * has completely unexpected contents, fall back to the
+	 * raw_sect we were given.
+	 */
+	switch (bits) {
+	case 0x8000: raw_sect = CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR_0K;   break;
+	case 0xc000: raw_sect = CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR_128K; break;
+	case 0xe000: raw_sect = CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR_256K; break;
+	case 0xf000: raw_sect = CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR_384K; break;
+	default:
+		printf("Warning: Unexpected trial bits 0x%04x in trace vector 2, falling back to 0x%lx\n",
+		       bits, raw_sect);
+	}
+
+	return raw_sect;
+}
 #endif

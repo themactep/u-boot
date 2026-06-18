@@ -23,7 +23,6 @@
  * on the mv88e6176 via an SGMII interface.
  */
 
-#include <common.h>
 #include <dm/device.h>
 #include <dm/device_compat.h>
 #include <dm/device-internal.h>
@@ -632,7 +631,7 @@ static int mv88e6xxx_port_enable(struct udevice *dev, int port, struct phy_devic
 			dev_dbg(dev, "configure internal RGMII delays\n");
 
 			/* RGMII delays */
-			val &= ~(PORT_REG_PHYS_CTRL_RGMII_DELAY_RXCLK ||
+			val &= ~(PORT_REG_PHYS_CTRL_RGMII_DELAY_RXCLK |
 				 PORT_REG_PHYS_CTRL_RGMII_DELAY_TXCLK);
 			if (phy->interface == PHY_INTERFACE_MODE_RGMII_ID ||
 			    phy->interface == PHY_INTERFACE_MODE_RGMII_RXID)
@@ -745,6 +744,7 @@ static int mv88e6xxx_probe(struct udevice *dev)
 {
 	struct dsa_pdata *dsa_pdata = dev_get_uclass_plat(dev);
 	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
+	fdt_addr_t smi_addr;
 	int val, ret;
 
 	if (ofnode_valid(dev_ofnode(dev)) &&
@@ -752,6 +752,13 @@ static int mv88e6xxx_probe(struct udevice *dev)
 		dev_dbg(dev, "switch disabled\n");
 		return -ENODEV;
 	}
+
+	smi_addr = dev_read_addr(dev);
+	if (smi_addr == FDT_ADDR_T_NONE) {
+		dev_err(dev, "Missing SMI address\n");
+		return -EINVAL;
+	}
+	priv->smi_addr = smi_addr;
 
 	/* probe internal mdio bus */
 	ret = mv88e6xxx_probe_mdio(dev);

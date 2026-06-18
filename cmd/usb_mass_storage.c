@@ -6,7 +6,6 @@
  * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
  */
 
-#include <common.h>
 #include <blk.h>
 #include <command.h>
 #include <console.h>
@@ -25,6 +24,11 @@ static int ums_read_sector(struct ums *ums_dev,
 {
 	struct blk_desc *block_dev = &ums_dev->block_dev;
 	lbaint_t blkstart = start + ums_dev->start_sector;
+	int ret;
+
+	ret = blk_dselect_hwpart(block_dev, ums_dev->hwpart);
+	if (ret && ret != -ENOSYS)
+		return ret;
 
 	return blk_dread(block_dev, blkstart, blkcnt, buf);
 }
@@ -34,6 +38,11 @@ static int ums_write_sector(struct ums *ums_dev,
 {
 	struct blk_desc *block_dev = &ums_dev->block_dev;
 	lbaint_t blkstart = start + ums_dev->start_sector;
+	int ret;
+
+	ret = blk_dselect_hwpart(block_dev, ums_dev->hwpart);
+	if (ret && ret != -ENOSYS)
+		return ret;
 
 	return blk_dwrite(block_dev, blkstart, blkcnt, buf);
 }
@@ -88,10 +97,6 @@ static int ums_init(const char *devtype, const char *devnums_part_str)
 		if (!strchr(devnum_part_str, ':'))
 			partnum = 0;
 
-		/* f_mass_storage.c assumes SECTOR_SIZE sectors */
-		if (block_dev->blksz != SECTOR_SIZE)
-			goto cleanup;
-
 		ums_new = realloc(ums, (ums_count + 1) * sizeof(*ums));
 		if (!ums_new)
 			goto cleanup;
@@ -115,6 +120,7 @@ static int ums_init(const char *devtype, const char *devnums_part_str)
 		snprintf(name, UMS_NAME_LEN, "UMS disk %d", ums_count);
 		ums[ums_count].name = name;
 		ums[ums_count].block_dev = *block_dev;
+		ums[ums_count].hwpart = block_dev->hwpart;
 
 		printf("UMS: LUN %d, dev %s %d, hwpart %d, sector %#x, count %#x\n",
 		       ums_count, devtype, ums[ums_count].block_dev.devnum,

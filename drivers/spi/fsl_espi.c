@@ -8,7 +8,7 @@
  *	   Chuanhua Han (chuanhua.han@nxp.com)
  */
 
-#include <common.h>
+#include <config.h>
 #include <log.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
@@ -216,13 +216,13 @@ int espi_xfer(struct fsl_spi_slave *fsl,  uint cs, unsigned int bitlen,
 		break;
 	case SPI_XFER_BEGIN | SPI_XFER_END:
 		len = data_len;
-		buffer = (unsigned char *)malloc(len * 2);
+		buffer = (unsigned char *)malloc(len);
 		if (!buffer) {
 			debug("SF: Failed to malloc memory.\n");
 			return 1;
 		}
 		memcpy(buffer, data_out, len);
-		rx_offset = len;
+		rx_offset = 0;
 		cmd_len = 0;
 		break;
 	}
@@ -513,8 +513,8 @@ static int fsl_espi_child_pre_probe(struct udevice *dev)
 	struct udevice *bus = dev->parent;
 	struct fsl_spi_slave *fsl = dev_get_priv(bus);
 
-	debug("%s cs %u\n", __func__, slave_plat->cs);
-	fsl->cs = slave_plat->cs;
+	debug("%s cs %u\n", __func__, slave_plat->cs[0]);
+	fsl->cs = slave_plat->cs[0];
 
 	return 0;
 }

@@ -7,7 +7,6 @@
  */
 
 #ifndef USE_HOSTCC
-#include <common.h>
 #include <env.h>
 #include <display_options.h>
 #include <init.h>
@@ -16,22 +15,13 @@
 #include <malloc.h>
 #include <u-boot/crc.h>
 
-#ifdef CONFIG_SHOW_BOOT_PROGRESS
-#include <status_led.h>
-#endif
-
 #if CONFIG_IS_ENABLED(FIT) || CONFIG_IS_ENABLED(OF_LIBFDT)
 #include <linux/libfdt.h>
 #include <fdt_support.h>
 #endif
 
-#include <asm/global_data.h>
-#include <u-boot/md5.h>
-#include <u-boot/sha1.h>
 #include <linux/errno.h>
 #include <asm/io.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* Set this if we have less than 4 MB of malloc() space */
 #if CONFIG_SYS_MALLOC_LEN < (4096 * 1024)
@@ -42,6 +32,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #else /* USE_HOSTCC */
 #include "mkimage.h"
+#include <linux/kconfig.h>
 #include <u-boot/md5.h>
 #include <time.h>
 
@@ -62,7 +53,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #include <relocate.h>
 #include <linux/lzo.h>
 #include <linux/zstd.h>
-#include <linux/kconfig.h>
 #include <lzma/LzmaTypes.h>
 #include <lzma/LzmaDec.h>
 #include <lzma/LzmaTools.h>
@@ -133,7 +123,10 @@ static const table_entry_t uimage_os[] = {
 	{	IH_OS_OPENRTOS,	"openrtos",	"OpenRTOS",		},
 #endif
 	{	IH_OS_OPENSBI,	"opensbi",	"RISC-V OpenSBI",	},
-	{	IH_OS_EFI,	"efi",		"EFI Firmware" },
+	{	IH_OS_EFI,	"efi",		"EFI Firmware"		},
+#ifdef CONFIG_BOOTM_ELF
+	{	IH_OS_ELF,	"elf",		"ELF Image"		},
+#endif
 
 	{	-1,		"",		"",			},
 };
@@ -183,6 +176,9 @@ static const table_entry_t uimage_type[] = {
 	{	IH_TYPE_FDT_LEGACY, "fdt_legacy", "legacy Image with Flat Device Tree ", },
 	{	IH_TYPE_RENESAS_SPKG, "spkgimage", "Renesas SPKG Image" },
 	{	IH_TYPE_STARFIVE_SPL, "sfspl", "StarFive SPL Image" },
+	{	IH_TYPE_TFA_BL31, "tfa-bl31",  "TFA BL31 Image", },
+	{	IH_TYPE_STM32IMAGE_V2, "stm32imagev2", "STMicroelectronics STM32 Image V2.0" },
+	{	IH_TYPE_AMLIMAGE,   "amlimage",   "Amlogic Boot Image" },
 	{	-1,		    "",		  "",			},
 };
 
@@ -415,15 +411,20 @@ void image_print_contents(const void *ptr)
  * @type:	OS type (IH_OS_...)
  * @comp_type:	Compression type being used (IH_COMP_...)
  * @is_xip:	true if the load address matches the image start
+ * @load:	Load address for printing
  */
-static void print_decomp_msg(int comp_type, int type, bool is_xip)
+static void print_decomp_msg(int comp_type, int type, bool is_xip,
+			     ulong load)
 {
 	const char *name = genimg_get_type_name(type);
 
+	/* Shows "Loading Kernel Image" for example */
 	if (comp_type == IH_COMP_NONE)
-		printf("   %s %s\n", is_xip ? "XIP" : "Loading", name);
+		printf("   %s %s", is_xip ? "XIP" : "Loading", name);
 	else
-		printf("   Uncompressing %s\n", name);
+		printf("   Uncompressing %s", name);
+
+	printf(" to %lx\n", load);
 }
 
 int image_decomp_type(const unsigned char *buf, ulong len)
@@ -448,7 +449,7 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 	int ret = -ENOSYS;
 
 	*load_end = load;
-	print_decomp_msg(comp, type, load == image_start);
+	print_decomp_msg(comp, type, load == image_start, load);
 
 	/*
 	 * Load the image to the right place, decompressing if needed. After
@@ -526,10 +527,10 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		printf("Unimplemented compression type %d\n", comp);
 		return ret;
 	}
-	if (ret)
-		return ret;
 
 	*load_end = load + image_len;
+	if (ret)
+		return ret;
 
 	return 0;
 }

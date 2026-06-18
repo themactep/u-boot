@@ -5,7 +5,6 @@
 
 #define LOG_CATEGORY UCLASS_SCMI_AGENT
 
-#include <common.h>
 #include <dm.h>
 #include <malloc.h>
 #include <scmi_agent.h>
@@ -66,10 +65,10 @@ struct scmi_channel {
 };
 
 static u8 protocols[] = {
-	SCMI_PROTOCOL_ID_POWER_DOMAIN,
-	SCMI_PROTOCOL_ID_CLOCK,
-	SCMI_PROTOCOL_ID_RESET_DOMAIN,
-	SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,
+	CONFIG_IS_ENABLED(SCMI_POWER_DOMAIN, (SCMI_PROTOCOL_ID_POWER_DOMAIN,))
+	CONFIG_IS_ENABLED(CLK_SCMI, (SCMI_PROTOCOL_ID_CLOCK,))
+	CONFIG_IS_ENABLED(RESET_SCMI, (SCMI_PROTOCOL_ID_RESET_DOMAIN,))
+	CONFIG_IS_ENABLED(DM_REGULATOR_SCMI, (SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN,))
 };
 
 #define NUM_PROTOCOLS ARRAY_SIZE(protocols)
@@ -81,9 +80,9 @@ static struct sandbox_scmi_pwd scmi_pwdom[] = {
 };
 
 static struct sandbox_scmi_clk scmi_clk[] = {
-	{ .rate = 333 },
-	{ .rate = 200 },
-	{ .rate = 1000 },
+	{ .rate = 333, .perm = 0xE0000000 },
+	{ .rate = 200, .perm = 0xE0000000 },
+	{ .rate = 1000, .perm = 0xE0000000 },
 };
 
 static struct sandbox_scmi_reset scmi_reset[] = {
@@ -701,6 +700,21 @@ static int sandbox_scmi_pwd_name_get(struct udevice *dev, struct scmi_msg *msg)
 
 /* Clock Protocol */
 
+static int sandbox_scmi_clock_protocol_version(struct udevice *dev,
+					       struct scmi_msg *msg)
+{
+	struct scmi_protocol_version_out *out = NULL;
+
+	if (!msg->out_msg || msg->out_msg_sz < sizeof(*out))
+		return -EINVAL;
+
+	out = (struct scmi_protocol_version_out *)msg->out_msg;
+	out->version = 0x30000;
+	out->status = SCMI_SUCCESS;
+
+	return 0;
+}
+
 static int sandbox_scmi_clock_protocol_attribs(struct udevice *dev,
 					       struct scmi_msg *msg)
 {
@@ -740,6 +754,9 @@ static int sandbox_scmi_clock_attribs(struct udevice *dev, struct scmi_msg *msg)
 
 		if (clk_state->enabled)
 			out->attributes = 1;
+
+		/* Restricted clock */
+		out->attributes |= BIT(1);
 
 		ret = snprintf(out->clock_name, sizeof(out->clock_name),
 			       "clk%u", in->clock_id);
@@ -811,7 +828,7 @@ static int sandbox_scmi_clock_rate_get(struct udevice *dev,
 
 static int sandbox_scmi_clock_gate(struct udevice *dev, struct scmi_msg *msg)
 {
-	struct scmi_clk_state_in *in = NULL;
+	struct scmi_clk_state_in_v2 *in = NULL;
 	struct scmi_clk_state_out *out = NULL;
 	struct sandbox_scmi_clk *clk_state = NULL;
 
@@ -819,7 +836,7 @@ static int sandbox_scmi_clock_gate(struct udevice *dev, struct scmi_msg *msg)
 	    !msg->out_msg || msg->out_msg_sz < sizeof(*out))
 		return -EINVAL;
 
-	in = (struct scmi_clk_state_in *)msg->in_msg;
+	in = (struct scmi_clk_state_in_v2 *)msg->in_msg;
 	out = (struct scmi_clk_state_out *)msg->out_msg;
 
 	clk_state = get_scmi_clk_state(in->clock_id);
@@ -831,6 +848,34 @@ static int sandbox_scmi_clock_gate(struct udevice *dev, struct scmi_msg *msg)
 		out->status = SCMI_PROTOCOL_ERROR;
 	} else {
 		clk_state->enabled = in->attributes;
+
+		out->status = SCMI_SUCCESS;
+	}
+
+	return 0;
+}
+
+static int sandbox_scmi_clock_permissions_get(struct udevice *dev,
+					      struct scmi_msg *msg)
+{
+	struct scmi_clk_get_permissions_in *in = NULL;
+	struct scmi_clk_get_permissions_out *out = NULL;
+	struct sandbox_scmi_clk *clk_state = NULL;
+
+	if (!msg->in_msg || msg->in_msg_sz < sizeof(*in) ||
+	    !msg->out_msg || msg->out_msg_sz < sizeof(*out))
+		return -EINVAL;
+
+	in = (struct scmi_clk_get_permissions_in *)msg->in_msg;
+	out = (struct scmi_clk_get_permissions_out *)msg->out_msg;
+
+	clk_state = get_scmi_clk_state(in->clock_id);
+	if (!clk_state) {
+		dev_err(dev, "Unexpected clock ID %u\n", in->clock_id);
+
+		out->status = SCMI_NOT_FOUND;
+	} else {
+		out->permissions = clk_state->perm;
 
 		out->status = SCMI_SUCCESS;
 	}
@@ -1124,6 +1169,13 @@ unsigned int sandbox_scmi_channel_id(struct udevice *dev)
 	return chan->channel_id;
 }
 
+static int sandbox_proto_not_supported(struct scmi_msg *msg)
+{
+	*(u32 *)msg->out_msg = SCMI_NOT_SUPPORTED;
+
+	return 0;
+}
+
 static int sandbox_scmi_test_process_msg(struct udevice *dev,
 					 struct scmi_channel *channel,
 					 struct scmi_msg *msg)
@@ -1160,6 +1212,9 @@ static int sandbox_scmi_test_process_msg(struct udevice *dev,
 		}
 		break;
 	case SCMI_PROTOCOL_ID_POWER_DOMAIN:
+		if (!CONFIG_IS_ENABLED(SCMI_POWER_DOMAIN))
+			return sandbox_proto_not_supported(msg);
+
 		switch (msg->message_id) {
 		case SCMI_PROTOCOL_VERSION:
 			return sandbox_scmi_pwd_protocol_version(dev, msg);
@@ -1180,7 +1235,12 @@ static int sandbox_scmi_test_process_msg(struct udevice *dev,
 		}
 		break;
 	case SCMI_PROTOCOL_ID_CLOCK:
+		if (!CONFIG_IS_ENABLED(CLK_SCMI))
+			return sandbox_proto_not_supported(msg);
+
 		switch (msg->message_id) {
+		case SCMI_PROTOCOL_VERSION:
+			return sandbox_scmi_clock_protocol_version(dev, msg);
 		case SCMI_PROTOCOL_ATTRIBUTES:
 			return sandbox_scmi_clock_protocol_attribs(dev, msg);
 		case SCMI_CLOCK_ATTRIBUTES:
@@ -1191,11 +1251,16 @@ static int sandbox_scmi_test_process_msg(struct udevice *dev,
 			return sandbox_scmi_clock_rate_get(dev, msg);
 		case SCMI_CLOCK_CONFIG_SET:
 			return sandbox_scmi_clock_gate(dev, msg);
+		case SCMI_CLOCK_GET_PERMISSIONS:
+			return sandbox_scmi_clock_permissions_get(dev, msg);
 		default:
 			break;
 		}
 		break;
 	case SCMI_PROTOCOL_ID_RESET_DOMAIN:
+		if (!CONFIG_IS_ENABLED(RESET_SCMI))
+			return sandbox_proto_not_supported(msg);
+
 		switch (msg->message_id) {
 		case SCMI_RESET_DOMAIN_ATTRIBUTES:
 			return sandbox_scmi_rd_attribs(dev, msg);
@@ -1206,6 +1271,9 @@ static int sandbox_scmi_test_process_msg(struct udevice *dev,
 		}
 		break;
 	case SCMI_PROTOCOL_ID_VOLTAGE_DOMAIN:
+		if (!CONFIG_IS_ENABLED(DM_REGULATOR_SCMI))
+			return sandbox_proto_not_supported(msg);
+
 		switch (msg->message_id) {
 		case SCMI_VOLTAGE_DOMAIN_ATTRIBUTES:
 			return sandbox_scmi_voltd_attribs(dev, msg);
@@ -1224,8 +1292,7 @@ static int sandbox_scmi_test_process_msg(struct udevice *dev,
 	case SCMI_PROTOCOL_ID_SYSTEM:
 	case SCMI_PROTOCOL_ID_PERF:
 	case SCMI_PROTOCOL_ID_SENSOR:
-		*(u32 *)msg->out_msg = SCMI_NOT_SUPPORTED;
-		return 0;
+		return sandbox_proto_not_supported(msg);
 	default:
 		break;
 	}
@@ -1274,7 +1341,7 @@ static const struct udevice_id sandbox_scmi_test_ids[] = {
 	{ }
 };
 
-struct scmi_agent_ops sandbox_scmi_test_ops = {
+static const struct scmi_agent_ops sandbox_scmi_test_ops = {
 	.of_get_channel = sandbox_scmi_of_get_channel,
 	.process_msg = sandbox_scmi_test_process_msg,
 };

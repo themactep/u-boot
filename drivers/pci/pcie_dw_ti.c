@@ -3,7 +3,6 @@
  * Copyright (C) 2018 Texas Instruments, Inc
  */
 
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <pci.h>
@@ -11,7 +10,6 @@
 #include <power-domain.h>
 #include <regmap.h>
 #include <syscon.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm-generic/gpio.h>
 #include <dm/device_compat.h>
@@ -20,8 +18,6 @@
 #include <linux/err.h>
 
 #include "pcie_dw_common.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define PCIE_VENDORID_MASK	GENMASK(15, 0)
 #define PCIE_DEVICEID_SHIFT	16
@@ -46,7 +42,6 @@ DECLARE_GLOBAL_DATA_PTR;
 /* Offsets from App base */
 #define PCIE_CMD_STATUS			0x04
 #define LTSSM_EN_VAL			BIT(0)
-
 
 #define AM654_PCIE_DEV_TYPE_MASK	0x3
 #define EP				0x0

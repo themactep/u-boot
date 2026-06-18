@@ -1,8 +1,5 @@
 config BLK
-	bool # "Support block devices"
-	depends on DM
-	default y if MMC || USB || SCSI || NVME || IDE || AHCI || SATA
-	default y if EFI_MEDIA || VIRTIO_BLK || PVBLOCK
+	bool
 	help
 	  Enable support for block devices, such as SCSI, MMC and USB
 	  flash sticks. These provide a block-level interface which permits
@@ -13,7 +10,7 @@ config BLK
 
 config SPL_LEGACY_BLOCK
 	bool # "Enable Legacy Block Device"
-	depends on SPL && !DM_SPL
+	depends on SPL
 	default y if SPL_MMC || SPL_USB_STORAGE || SCSI || NVME || IDE
 	default y if SPL_AHCI_PCI
 	help
@@ -99,7 +96,8 @@ config TPL_BLOCK_CACHE
 
 config EFI_MEDIA
 	bool "Support EFI media drivers"
-	default y if EFI || SANDBOX
+	default y if EFI_CLIENT || SANDBOX
+	select BLK
 	help
 	  Enable this to support media devices on top of UEFI. This enables
 	  just the uclass so you also need a specific driver to make this do
@@ -108,8 +106,9 @@ config EFI_MEDIA
 	  For sandbox there is a test driver.
 
 config SPL_BLK_FS
-	bool "Load images from filesystems on block devices"
+	bool
 	depends on SPL_BLK
+	select SPL_FS_LOADER
 	help
 	  Use generic support to load images from fat/ext filesystems on
 	  different types of block devices such as NVMe.
@@ -139,6 +138,8 @@ endif  # EFI_MEDIA
 
 config IDE
 	bool "Support IDE controllers"
+	depends on !COMPILE_TEST
+	select BLK
 	help
 	  Enables support for IDE (Integrated Drive Electronics) hard drives.
 	  This allows access to raw blocks and filesystems on an IDE drive
@@ -148,7 +149,7 @@ config IDE
 if IDE
 
 config SYS_IDE_MAXBUS
-	hex "Maximumm number of IDE buses"
+	hex "Maximum number of IDE buses"
 	default 2
 	help
 	  This is the number of IDE buses provided by the board. Each one
@@ -265,6 +266,8 @@ config SYS_64BIT_LBA
 
 config RKMTD
 	bool "Rockchip rkmtd virtual block device"
+	select DEVRES
+	select RANDOM_UUID
 	help
 	  Enable "rkmtd" class and driver to create a virtual block device
 	  to transfer Rockchip boot block data to and from NAND with block

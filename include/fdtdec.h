@@ -16,6 +16,7 @@
 
 #include <linux/libfdt.h>
 #include <pci.h>
+#include <dm/ofnode_decl.h>
 
 /*
  * Support for 64bit fdt addresses.
@@ -72,7 +73,7 @@ struct bd_info;
  *	U-Boot is packaged as an ELF file, e.g. for debugging purposes
  * @FDTSRC_ENV: Provided by the fdtcontroladdr environment variable. This should
  *	be used for debugging/development only
- * @FDTSRC_NONE: No devicetree at all
+ * @FDTSRC_BLOBLIST: Provided by a bloblist from an earlier phase
  */
 enum fdt_source_t {
 	FDTSRC_SEPARATE,
@@ -80,6 +81,7 @@ enum fdt_source_t {
 	FDTSRC_BOARD,
 	FDTSRC_EMBED,
 	FDTSRC_ENV,
+	FDTSRC_BLOBLIST,
 };
 
 /*
@@ -134,23 +136,6 @@ struct fdt_pci_addr {
 	u32	phys_mid;
 	u32	phys_lo;
 };
-
-extern u8 __dtb_dt_begin[];	/* embedded device tree blob */
-extern u8 __dtb_dt_spl_begin[];	/* embedded device tree blob for SPL/TPL */
-
-/* Get a pointer to the embedded devicetree, if there is one, else NULL */
-static inline u8 *dtb_dt_embedded(void)
-{
-#ifdef CONFIG_OF_EMBED
-# ifdef CONFIG_SPL_BUILD
-	return __dtb_dt_spl_begin;
-# else
-	return __dtb_dt_begin;
-# endif
-#else
-	return NULL;
-#endif
-}
 
 /**
  * Compute the size of a resource.
@@ -213,6 +198,29 @@ struct fdtdec_phandle_args {
 	int args_count;
 	uint32_t args[MAX_PHANDLE_ARGS];
 };
+
+/**
+ * fdtdec_get_next_memory_node() - Get the next enabled memory node from device tree
+ *
+ * @mem: Current memory node to start search from, or ofnode_null() to get first node
+ *
+ * This function iterates through device tree nodes with device_type = "memory"
+ * property, automatically skipping disabled nodes (status != "okay").
+ *
+ * It is used to enumerate multiple memory regions when the system has
+ * non-contiguous or multiple memory banks defined in the device tree.
+ * The function continues searching from the given node onwards, looking
+ * for the next node with the "memory" device_type property and checking
+ * its status property.
+ *
+ * Can be called multiple times to iterate through all memory nodes.
+ * Pass ofnode_null() on first call, then pass the returned node
+ * on subsequent calls until an invalid node is returned.
+ *
+ * Return: Next valid, enabled memory ofnode, or invalid ofnode if no more
+ *         memory nodes exist
+ */
+ofnode fdtdec_get_next_memory_node(ofnode mem);
 
 /**
  * fdtdec_parse_phandle_with_args() - Find a node pointed by phandle in a list
@@ -717,6 +725,22 @@ int fdtdec_get_int_array(const void *blob, int node, const char *prop_name,
 		u32 *array, int count);
 
 /**
+ * Look up a property in a node and return its contents in a u64
+ * array of given length. The property must have at least enough data for
+ * the array (8*count bytes). It may have more, but this will be ignored.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param prop_name	name of property to find
+ * @param array		array to fill with data
+ * @param count		number of array elements
+ * Return: 0 if ok, or -FDT_ERR_NOTFOUND if the property is not found,
+ *		or -FDT_ERR_BADLAYOUT if not enough data
+ */
+int fdtdec_get_long_array(const void *blob, int node, const char *prop_name,
+		u64 *array, int count);
+
+/**
  * Look up a property in a node and return its contents in an integer
  * array of given length. The property must exist but may have less data that
  * expected (4*count bytes). It may have more, but this will be ignored.
@@ -1155,6 +1179,13 @@ int fdtdec_set_carveout(void *blob, const char *node, const char *prop_name,
 			unsigned int count, unsigned long flags);
 
 /**
+ * fdtdec_setup_embed - pick up embedded DTS
+ *
+ * Should be invoked under CONFIG_OF_EMBED guard.
+ */
+void fdtdec_setup_embed(void);
+
+/**
  * Set up the device tree ready for use
  */
 int fdtdec_setup(void);
@@ -1190,10 +1221,12 @@ int fdtdec_resetup(int *rescan);
  *
  * The existing devicetree is available at gd->fdt_blob
  *
- * @err internal error code if we fail to setup a DTB
- * @returns new devicetree blob pointer
+ * @fdtp: Existing devicetree blob pointer; update this and return 0 if a
+ * different devicetree should be used
+ * Return: 0 on success, -EEXIST if the existing FDT is OK, -ve error code if we
+ * fail to setup a DTB
  */
-void *board_fdt_blob_setup(int *err);
+int board_fdt_blob_setup(void **fdtp);
 
 /*
  * Decode the size of memory

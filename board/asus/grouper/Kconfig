@@ -6,15 +6,8 @@ config SYS_BOARD
 config SYS_VENDOR
 	default "asus"
 
-config SYS_CONFIG_NAME
-	default "grouper"
-
-config GROUPER_TPS65911
-	bool "Enable support TI TPS65911 PMIC"
-	select CMD_POWEROFF
-
-config GROUPER_MAX77663
-	bool "Enable support MAXIM MAX77663 PMIC"
-	select CMD_POWEROFF
+config TEGRA_BOARD_STRING
+	string "Default Tegra board name"
+	default "ASUS Google Nexus 7 (2012)"
 
 endif

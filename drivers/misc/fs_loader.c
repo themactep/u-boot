@@ -6,7 +6,6 @@
 
 #define LOG_CATEGORY UCLASS_FS_FIRMWARE_LOADER
 
-#include <common.h>
 #include <dm.h>
 #include <env.h>
 #include <errno.h>
@@ -14,7 +13,6 @@
 #include <fs.h>
 #include <fs_loader.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <dm/device-internal.h>
 #include <dm/root.h>
 #include <linux/string.h>
@@ -25,8 +23,6 @@
 #ifdef CONFIG_CMD_UBIFS
 #include <ubi_uboot.h>
 #endif
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /**
  * struct firmware - A place for storing firmware and its attribute data.
@@ -149,7 +145,7 @@ static int _request_firmware_prepare(struct udevice *dev,
  */
 static int fw_get_filesystem_firmware(struct udevice *dev)
 {
-	loff_t actread;
+	loff_t actread = 0;
 	char *storage_interface, *dev_part, *ubi_mtdpart, *ubi_volume;
 	int ret;
 

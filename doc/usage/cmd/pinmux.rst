@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: pinmux (command)
+
 pinmux command
 ==============
 
@@ -87,9 +90,3 @@ Configuration
 -------------
 
 The pinmux command is only available if CONFIG_CMD_PINMUX=y.
-
-Return value
-------------
-
-The return value $? is set to 0 (true) if the command succeded and to 1 (false)
-otherwise.

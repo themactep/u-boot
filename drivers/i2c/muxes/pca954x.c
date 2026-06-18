@@ -5,26 +5,30 @@
  * Written by Michal Simek
  */
 
-#include <common.h>
 #include <dm.h>
 #include <errno.h>
 #include <i2c.h>
 #include <log.h>
 #include <malloc.h>
-#include <asm/global_data.h>
 
 #include <asm-generic/gpio.h>
 
-DECLARE_GLOBAL_DATA_PTR;
-
 enum pca_type {
+	MAX7356,
+	MAX7357,
+	MAX7358,
+	MAX7367,
+	MAX7368,
+	MAX7369,
 	PCA9543,
 	PCA9544,
+	PCA9545,
 	PCA9546,
 	PCA9547,
 	PCA9548,
 	PCA9646,
 	PCA9847,
+	PCA9848,
 };
 
 struct chip_desc {
@@ -43,6 +47,31 @@ struct pca954x_priv {
 };
 
 static const struct chip_desc chips[] = {
+	[MAX7356] = {
+		.muxtype = pca954x_isswi,
+		.width = 8,
+	},
+	[MAX7357] = {
+		.muxtype = pca954x_isswi,
+		.width = 8,
+	},
+	[MAX7358] = {
+		.muxtype = pca954x_isswi,
+		.width = 8,
+	},
+	[MAX7367] = {
+		.muxtype = pca954x_isswi,
+		.width = 4,
+	},
+	[MAX7368] = {
+		.muxtype = pca954x_isswi,
+		.width = 4,
+	},
+	[MAX7369] = {
+		.enable = 0x4,
+		.muxtype = pca954x_ismux,
+		.width = 4,
+	},
 	[PCA9543] = {
 		.muxtype = pca954x_isswi,
 		.width = 2,
@@ -50,6 +79,10 @@ static const struct chip_desc chips[] = {
 	[PCA9544] = {
 		.enable = 0x4,
 		.muxtype = pca954x_ismux,
+		.width = 4,
+	},
+	[PCA9545] = {
+		.muxtype = pca954x_isswi,
 		.width = 4,
 	},
 	[PCA9546] = {
@@ -72,6 +105,10 @@ static const struct chip_desc chips[] = {
 	[PCA9847] = {
 		.enable = 0x8,
 		.muxtype = pca954x_ismux,
+		.width = 8,
+	},
+	[PCA9848] = {
+		.muxtype = pca954x_isswi,
 		.width = 8,
 	},
 };
@@ -106,13 +143,21 @@ static const struct i2c_mux_ops pca954x_ops = {
 };
 
 static const struct udevice_id pca954x_ids[] = {
+	{ .compatible = "maxim,max7356", .data = MAX7356 },
+	{ .compatible = "maxim,max7357", .data = MAX7357 },
+	{ .compatible = "maxim,max7358", .data = MAX7358 },
+	{ .compatible = "maxim,max7367", .data = MAX7367 },
+	{ .compatible = "maxim,max7368", .data = MAX7368 },
+	{ .compatible = "maxim,max7369", .data = MAX7369 },
 	{ .compatible = "nxp,pca9543", .data = PCA9543 },
 	{ .compatible = "nxp,pca9544", .data = PCA9544 },
+	{ .compatible = "nxp,pca9545", .data = PCA9545 },
 	{ .compatible = "nxp,pca9546", .data = PCA9546 },
 	{ .compatible = "nxp,pca9547", .data = PCA9547 },
 	{ .compatible = "nxp,pca9548", .data = PCA9548 },
 	{ .compatible = "nxp,pca9646", .data = PCA9646 },
 	{ .compatible = "nxp,pca9847", .data = PCA9847 },
+	{ .compatible = "nxp,pca9848", .data = PCA9848 },
 	{ }
 };
 

@@ -14,11 +14,17 @@
 
 #include <linux/types.h>
 
+struct ram_alias_check {
+	void *probe_addr;
+	void *alias_addr;
+	long size;
+};
+
 /*
  * In case of the EFI app the UEFI firmware provides the low-level
  * initialisation.
  */
-#ifdef CONFIG_EFI
+#ifdef CONFIG_EFI_CLIENT
 #define ll_boot_init()	false
 #else
 #include <asm/global_data.h>
@@ -88,6 +94,7 @@ int dram_init(void);
 int dram_init_banksize(void);
 
 long get_ram_size(long *base, long size);
+long probe_ram_size_by_alias(const struct ram_alias_check *checks);
 phys_size_t get_effective_memsize(void);
 
 int testdram(void);
@@ -168,6 +175,17 @@ defined(CONFIG_SAVE_PREV_BL_FDT_ADDR)
  * Return: 0 if ok; -ENODATA on error
  */
 int save_prev_bl_data(void);
+
+/**
+ * get_prev_bl_fdt_addr - When u-boot is chainloaded, get the address
+ * of the FDT passed by the previous bootloader.
+ *
+ * Return: the address of the FDT passed by the previous bootloader
+ * or 0 if not found.
+ */
+phys_addr_t get_prev_bl_fdt_addr(void);
+#else
+#define get_prev_bl_fdt_addr() 0LLU
 #endif
 
 /**
@@ -292,6 +310,17 @@ int misc_init_r(void);
 
 /* common/board_info.c */
 int checkboard(void);
+
+/**
+ * show_board_info() - Show board information
+ *
+ * Check sysinfo for board information. Failing that if the root node of the DTB
+ * has a "model" property, show it.
+ *
+ * Then call checkboard().
+ *
+ * Return 0 if OK, -ve on error
+ */
 int show_board_info(void);
 
 /**
@@ -378,6 +407,8 @@ void bdinfo_print_size(const char *name, uint64_t size);
 
 /* Show arch-specific information for the 'bd' command */
 void arch_print_bdinfo(void);
+
+struct cmd_tbl;
 
 int do_bdinfo(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]);
 

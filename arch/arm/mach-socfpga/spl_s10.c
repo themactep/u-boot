@@ -7,11 +7,8 @@
 #include <hang.h>
 #include <init.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <asm/u-boot.h>
 #include <asm/utils.h>
-#include <common.h>
 #include <debug_uart.h>
 #include <image.h>
 #include <spl.h>
@@ -23,8 +20,6 @@
 #include <asm/arch/system_manager.h>
 #include <watchdog.h>
 #include <dm/uclass.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 void board_init_f(ulong dummy)
 {
@@ -53,6 +48,10 @@ void board_init_f(ulong dummy)
 
 	socfpga_per_reset(SOCFPGA_RESET(OSC1TIMER0), 0);
 	timer_init();
+
+	mbox_init();
+
+	mbox_hps_stage_notify(HPS_EXECUTION_STATE_FSBL);
 
 	sysmgr_pinmux_init();
 
@@ -85,8 +84,6 @@ void board_init_f(ulong dummy)
 			hang();
 		}
 #endif
-
-	mbox_init();
 
 #ifdef CONFIG_CADENCE_QSPI
 	mbox_qspi_open();

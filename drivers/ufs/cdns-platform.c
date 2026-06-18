@@ -6,17 +6,14 @@
  */
 
 #include <clk.h>
-#include <common.h>
 #include <dm.h>
-#include <ufs.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
 #include <linux/bitops.h>
 #include <linux/err.h>
+#include <linux/time.h>
 
 #include "ufs.h"
-
-#define USEC_PER_SEC	1000000L
 
 #define CDNS_UFS_REG_HCLKDIV	0xFC
 #define CDNS_UFS_REG_PHY_XCFGD1	0x113C
@@ -103,13 +100,6 @@ static int cdns_ufs_pltfm_probe(struct udevice *dev)
 	return err;
 }
 
-static int cdns_ufs_pltfm_bind(struct udevice *dev)
-{
-	struct udevice *scsi_dev;
-
-	return ufs_scsi_bind(dev, &scsi_dev);
-}
-
 static const struct udevice_id cdns_ufs_pltfm_ids[] = {
 	{
 		.compatible = "cdns,ufshc-m31-16nm",
@@ -122,5 +112,4 @@ U_BOOT_DRIVER(cdns_ufs_pltfm) = {
 	.id		= UCLASS_UFS,
 	.of_match	= cdns_ufs_pltfm_ids,
 	.probe		= cdns_ufs_pltfm_probe,
-	.bind		= cdns_ufs_pltfm_bind,
 };

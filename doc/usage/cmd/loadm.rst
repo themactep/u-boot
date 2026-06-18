@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: loadm (command)
+
 loadm command
 =============
 
@@ -40,10 +43,3 @@ Configuration
 -------------
 
 The command is only available if CONFIG_CMD_LOADM=y.
-
-Return value
-------------
-
-The return value $? is set 0 (true) if the loading is succefull, and
-is set to 1 (false) in case of error.
-

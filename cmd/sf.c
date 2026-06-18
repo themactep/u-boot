@@ -5,15 +5,16 @@
  * Copyright (C) 2008 Atmel Corporation
  */
 
-#include <common.h>
 #include <command.h>
 #include <display_options.h>
 #include <div64.h>
 #include <dm.h>
 #include <log.h>
+#include <lmb.h>
 #include <malloc.h>
 #include <mapmem.h>
 #include <spi.h>
+#include <time.h>
 #include <spi_flash.h>
 #include <asm/cache.h>
 #include <jffs2/jffs2.h>
@@ -135,8 +136,9 @@ static int do_spi_flash_probe(int argc, char *const argv[])
 	}
 	flash = NULL;
 	if (use_dt) {
-		spi_flash_probe_bus_cs(bus, cs, &new);
-		flash = dev_get_uclass_priv(new);
+		ret = spi_flash_probe_bus_cs(bus, cs, &new);
+		if (!ret)
+			flash = dev_get_uclass_priv(new);
 	} else {
 		flash = spi_flash_probe(bus, cs, speed, mode);
 	}
@@ -195,7 +197,7 @@ static const char *spi_flash_update_block(struct spi_flash *flash, u32 offset,
 		return NULL;
 	}
 	/* Erase the entire sector */
-	if (spi_flash_erase(flash, offset, flash->sector_size))
+	if (spi_flash_erase(flash, read_offset, flash->sector_size))
 		return "erase";
 	/* If it's a partial sector, copy the data into the temp-buffer */
 	if (len != flash->sector_size) {
@@ -203,7 +205,7 @@ static const char *spi_flash_update_block(struct spi_flash *flash, u32 offset,
 		ptr = cmp_buf;
 	}
 	/* Write one complete sector */
-	if (spi_flash_write(flash, offset, flash->sector_size, ptr))
+	if (spi_flash_write(flash, read_offset, flash->sector_size, ptr))
 		return "write";
 
 	return NULL;
@@ -239,7 +241,6 @@ static int spi_flash_update(struct spi_flash *flash, u32 offset,
 		ulong last_update = get_timer(0);
 
 		for (; buf < end && !err_oper; buf += todo, offset += todo) {
-			todo = min_t(size_t, end - buf, flash->sector_size);
 			todo = min_t(size_t, end - buf,
 				     flash->sector_size - (offset % flash->sector_size));
 			if (get_timer(last_update) > 100) {
@@ -315,6 +316,13 @@ static int do_spi_flash_read_write(int argc, char *const argv[])
 	} else if (strncmp(argv[0], "read", 4) == 0 ||
 			strncmp(argv[0], "write", 5) == 0) {
 		int read;
+
+		if (CONFIG_IS_ENABLED(LMB)) {
+			if (lmb_read_check(addr, len)) {
+				printf("ERROR: trying to overwrite reserved memory...\n");
+				return CMD_RET_FAILURE;
+			}
+		}
 
 		read = strncmp(argv[0], "read", 4) == 0;
 		if (read)

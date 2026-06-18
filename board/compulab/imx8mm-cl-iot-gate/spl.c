@@ -4,7 +4,6 @@
  * Copyright 2020 Linaro
  */
 
-#include <common.h>
 #include <command.h>
 #include <cpu_func.h>
 #include <hang.h>
@@ -32,8 +31,6 @@
 #include <power/bd71837.h>
 
 #include "ddr/ddr.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {

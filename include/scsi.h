@@ -9,10 +9,7 @@
 #include <asm/cache.h>
 #include <bouncebuf.h>
 #include <linux/dma-direction.h>
-
-/* Fix this to the maximum */
-#define SCSI_MAX_DEVICE \
-	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
+#include <part.h>
 
 struct udevice;
 
@@ -99,7 +96,6 @@ struct scsi_cmd {
 #define	M_X_WIDE_REQ	(0x03)
 #define	M_X_PPR_REQ	(0x04)
 
-
 /*
 **	Status
 */
@@ -134,7 +130,6 @@ struct scsi_cmd {
 #define SENSE_ABORTED_COMMAND	0xB
 #define SENSE_VOLUME_OVERFLOW	0xD
 #define SENSE_MISCOMPARE			0xE
-
 
 #define SCSI_CHANGE_DEF	0x40		/* Change Definition (Optional) */
 #define SCSI_COMPARE		0x39		/* Compare (O) */
@@ -187,6 +182,7 @@ struct scsi_cmd {
 #define SCSI_WRT_VERIFY	0x2E		/* Write and Verify (O) */
 #define SCSI_WRITE_LONG	0x3F		/* Write Long (O) */
 #define SCSI_WRITE_SAME	0x41		/* Write Same (O) */
+#define SCSI_UNMAP	0x42		/* Write 10-Byte (MANDATORY) */
 
 /**
  * enum scsi_cmd_phase - current phase of the SCSI protocol
@@ -344,6 +340,7 @@ int scsi_bus_reset(struct udevice *dev);
  * scsi_scan() - Scan all SCSI controllers for available devices
  *
  * @vebose: true to show information about each device found
+ * Return: 0 if OK, -ve on error
  */
 int scsi_scan(bool verbose);
 
@@ -352,13 +349,22 @@ int scsi_scan(bool verbose);
  *
  * @dev:	SCSI bus
  * @verbose:	true to show information about each device found
+ * Return: 0 if OK, -ve on error
  */
 int scsi_scan_dev(struct udevice *dev, bool verbose);
 
-#ifndef CONFIG_DM_SCSI
-void scsi_low_level_init(int busdevfunc);
-void scsi_init(void);
-#endif
+/**
+ * scsi_get_blk_by_uuid() - Provides SCSI partition information.
+ *
+ * scsi_scan() must have been called before calling this function.
+ *
+ * @uuid:		UUID of the partition for fetching its info
+ * @blk_desc_ptr:	Provides the blk descriptor
+ * @part_info_ptr:	Provides partition info
+ * Return: 0 if OK, -ve on error
+ */
+int scsi_get_blk_by_uuid(const char *uuid, struct blk_desc **blk_desc_ptr,
+			 struct disk_partition *part_info_ptr);
 
 #define SCSI_IDENTIFY					0xC0  /* not used */
 

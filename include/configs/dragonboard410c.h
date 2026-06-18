@@ -9,7 +9,6 @@
 #define __CONFIGS_DRAGONBOARD410C_H
 
 #include <linux/sizes.h>
-#include <asm/arch/sysmap-apq8016.h>
 
 /* Build new ELF image from u-boot.bin (U-Boot + appended DTB) */
 
@@ -18,16 +17,5 @@
 /* Note: 8 MiB (0x86000000 - 0x86800000) are reserved for tz/smem/hyp/rmtfs/rfsa */
 #define PHYS_SDRAM_1_SIZE		SZ_1G
 #define CFG_SYS_SDRAM_BASE		PHYS_SDRAM_1
-
-/* Environment */
-#define BOOT_TARGET_DEVICES(func) \
-	func(USB, usb, 0) \
-	func(MMC, mmc, 1) \
-	func(MMC, mmc, 0) \
-	func(DHCP, dhcp, na)
-
-#include <config_distro_bootcmd.h>
-
-#define CFG_EXTRA_ENV_SETTINGS BOOTENV
 
 #endif

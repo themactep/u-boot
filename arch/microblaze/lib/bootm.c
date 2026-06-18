@@ -7,6 +7,7 @@
  * Yasushi SHOJI <yashi@atmark-techno.com>
  */
 
+#include <bootm.h>
 #include <bootstage.h>
 #include <command.h>
 #include <cpu_func.h>
@@ -14,27 +15,10 @@
 #include <fdt_support.h>
 #include <hang.h>
 #include <image.h>
-#include <lmb.h>
 #include <log.h>
 #include <asm/cache.h>
-#include <asm/global_data.h>
 #include <u-boot/zlib.h>
 #include <asm/byteorder.h>
-
-DECLARE_GLOBAL_DATA_PTR;
-
-static ulong get_sp(void)
-{
-	ulong ret;
-
-	asm("addik %0, r1, 0" : "=r"(ret) : );
-	return ret;
-}
-
-void arch_lmb_reserve(struct lmb *lmb)
-{
-	arch_lmb_reserve_generic(lmb, get_sp(), gd->ram_top, 4096);
-}
 
 static void boot_jump_linux(struct bootm_headers *images, int flag)
 {
@@ -42,8 +26,6 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 	ulong dt = (ulong)images->ft_addr;
 	ulong rd_start = images->initrd_start;
 	ulong cmdline = images->cmdline_start;
-	int fake = (flag & BOOTM_STATE_OS_FAKE_GO);
-
 	thekernel = (void (*)(char *, ulong, ulong))images->ep;
 
 	debug("## Transferring control to Linux (at address 0x%08lx) ",
@@ -52,13 +34,11 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 	      cmdline, rd_start, dt);
 	bootstage_mark(BOOTSTAGE_ID_RUN_OS);
 
-	printf("\nStarting kernel ...%s\n\n", fake ?
-	       "(fake run for tracing)" : "");
-	bootstage_mark_name(BOOTSTAGE_ID_BOOTM_HANDOFF, "start_kernel");
+	bootm_final(flag);
 
 	flush_cache_all();
 
-	if (!fake) {
+	if (!(flag & BOOTM_STATE_OS_FAKE_GO)) {
 		/*
 		 * Linux Kernel Parameters (passing device tree):
 		 * r5: pointer to command line
@@ -81,9 +61,10 @@ static void boot_prep_linux(struct bootm_headers *images)
 	}
 }
 
-int do_bootm_linux(int flag, int argc, char *const argv[],
-		   struct bootm_headers *images)
+int do_bootm_linux(int flag, struct bootm_info *bmi)
 {
+	struct bootm_headers *images = bmi->images;
+
 	images->cmdline_start = (ulong)env_get("bootargs");
 
 	/* cmdline init is the part of 'prep' and nothing to do for 'bdt' */

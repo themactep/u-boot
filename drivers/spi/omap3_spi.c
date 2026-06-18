@@ -16,16 +16,13 @@
  * Modified by Ruslan Araslanov <ruslan.araslanov@vitecmm.com>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <spi.h>
+#include <time.h>
 #include <malloc.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/bitops.h>
 #include <omap3_spi.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct omap2_mcspi_platform_config {
 	unsigned int regs_offset;
@@ -393,7 +390,7 @@ static int omap3_spi_claim_bus(struct udevice *dev)
 	struct omap3_spi_priv *priv = dev_get_priv(bus);
 	struct dm_spi_slave_plat *slave_plat = dev_get_parent_plat(dev);
 
-	priv->cs = slave_plat->cs;
+	priv->cs = slave_plat->cs[0];
 	if (!priv->freq)
 		priv->freq = slave_plat->max_hz;
 
@@ -422,7 +419,7 @@ static int omap3_spi_set_wordlen(struct udevice *dev, unsigned int wordlen)
 	struct omap3_spi_priv *priv = dev_get_priv(bus);
 	struct dm_spi_slave_plat *slave_plat = dev_get_parent_plat(dev);
 
-	priv->cs = slave_plat->cs;
+	priv->cs = slave_plat->cs[0];
 	priv->wordlen = wordlen;
 	_omap3_spi_set_wordlen(priv);
 

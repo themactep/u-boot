@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0-or-later:
 
+.. index::
+   single: pause (command)
+
 pause command
 =============
 
@@ -45,9 +48,3 @@ Note that complex prompts require proper quoting:
     
     Usage:
     pause [prompt] - Wait until users presses any key. [prompt] can be used to customize the message.
-
-Return value
-------------
-
-The return value $? is always set to 0 (true), unless invoked in an invalid
-manner.

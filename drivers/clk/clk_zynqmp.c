@@ -5,7 +5,6 @@
  * Copyright (C) 2016 Xilinx, Inc.
  */
 
-#include <common.h>
 #include <log.h>
 #include <malloc.h>
 #include <dm/device_compat.h>
@@ -109,7 +108,8 @@ static const resource_size_t zynqmp_crl_apb_clkc_base = 0xff5e0020;
 #define PLLCTRL_POST_SRC_MASK	(0x7 << PLLCTRL_POST_SRC_SHFT)
 #define PLLCTRL_PRE_SRC_SHFT	20
 #define PLLCTRL_PRE_SRC_MASK	(0x7 << PLLCTRL_PRE_SRC_SHFT)
-
+#define PLL_TO_LPD_DIV_SHIFT	8
+#define PLL_TO_LPD_DIV_MASK	(0x3f << PLL_TO_LPD_DIV_SHIFT)
 
 #define NUM_MIO_PINS	77
 
@@ -150,6 +150,7 @@ enum zynqmp_clk {
 	clk_max,
 };
 
+#if IS_ENABLED(CONFIG_CMD_CLK)
 static const char * const clk_names[clk_max] = {
 	"iopll", "rpll", "apll", "dpll",
 	"vpll", "iopll_to_fpd", "rpll_to_fpd",
@@ -177,6 +178,7 @@ static const char * const clk_names[clk_max] = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 	NULL, NULL, NULL, NULL, "gem0_ref", "gem1_ref", "gem2_ref", "gem3_ref",
 };
+#endif
 
 static const u32 pll_src[][4] = {
 	{apll, 0xff, dpll, vpll},		/* acpu */
@@ -336,6 +338,8 @@ static u32 zynqmp_clk_get_register(enum zynqmp_clk id)
 		return CRF_APB_TOPSW_LSBUS_CTRL;
 	case iopll_to_fpd:
 		return CRL_APB_IOPLL_TO_FPD_CTRL;
+	case dpll_to_lpd:
+		return CRF_APB_DPLL_TO_LPD_CTRL;
 	default:
 		debug("Invalid clk id%d\n", id);
 	}
@@ -398,6 +402,22 @@ static ulong zynqmp_clk_get_pll_rate(struct zynqmp_clk_priv *priv,
 
 	if (clk_ctrl & (1 << 16))
 		freq /= 2;
+
+	if (id == dpll) {
+		u32 dpll_lpd_reg, cross_div;
+
+		dpll_lpd_reg = zynqmp_clk_get_register(dpll_to_lpd);
+
+		ret = zynqmp_mmio_read(dpll_lpd_reg, &cross_div);
+		if (ret) {
+			printf("%s mio read fail\n", __func__);
+			return -EIO;
+		}
+
+		cross_div = (cross_div & PLL_TO_LPD_DIV_MASK) >>
+			     PLL_TO_LPD_DIV_SHIFT;
+		freq /= cross_div;
+	}
 
 	return freq;
 }
@@ -728,6 +748,7 @@ static ulong zynqmp_clk_set_rate(struct clk *clk, ulong rate)
 	case gem_tsu:
 	case qspi_ref ... can1_ref:
 	case usb0_bus_ref ... usb3_dual_ref:
+	case dp_video_ref ... dp_stc_ref:
 		return zynqmp_clk_set_peripheral_rate(priv, id,
 						      rate, two_divs);
 	default:
@@ -735,15 +756,10 @@ static ulong zynqmp_clk_set_rate(struct clk *clk, ulong rate)
 	}
 }
 
-int soc_clk_dump(void)
+#if IS_ENABLED(CONFIG_CMD_CLK)
+static void zynqmp_clk_dump(struct udevice *dev)
 {
-	struct udevice *dev;
 	int i, ret;
-
-	ret = uclass_get_device_by_driver(UCLASS_CLK,
-		DM_DRIVER_GET(zynqmp_clk), &dev);
-	if (ret)
-		return ret;
 
 	printf("clk\t\tfrequency\n");
 	for (i = 0; i < clk_max; i++) {
@@ -754,12 +770,13 @@ int soc_clk_dump(void)
 
 			clk.id = i;
 			ret = clk_request(dev, &clk);
-			if (ret < 0)
-				return ret;
+			if (ret < 0) {
+				printf("%s clk_request() failed: %d\n",
+				       __func__, ret);
+				break;
+			}
 
 			rate = clk_get_rate(&clk);
-
-			clk_free(&clk);
 
 			if ((rate == (unsigned long)-ENOSYS) ||
 			    (rate == (unsigned long)-ENXIO) ||
@@ -769,9 +786,8 @@ int soc_clk_dump(void)
 				printf("%10s%20lu\n", name, rate);
 		}
 	}
-
-	return 0;
 }
+#endif
 
 static int zynqmp_get_freq_by_name(char *name, struct udevice *dev, ulong *freq)
 {
@@ -844,6 +860,7 @@ static int zynqmp_clk_enable(struct clk *clk)
 		break;
 	case qspi_ref ... can1_ref:
 	case lpd_lsbus:
+	case topsw_lsbus:
 		clkact_shift = 24;
 		mask = 0x1;
 		break;
@@ -867,10 +884,13 @@ static int zynqmp_clk_enable(struct clk *clk)
 	return ret;
 }
 
-static struct clk_ops zynqmp_clk_ops = {
+static const struct clk_ops zynqmp_clk_ops = {
 	.set_rate = zynqmp_clk_set_rate,
 	.get_rate = zynqmp_clk_get_rate,
 	.enable = zynqmp_clk_enable,
+#if IS_ENABLED(CONFIG_CMD_CLK)
+	.dump = zynqmp_clk_dump,
+#endif
 };
 
 static const struct udevice_id zynqmp_clk_ids[] = {

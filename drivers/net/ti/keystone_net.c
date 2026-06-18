@@ -5,10 +5,8 @@
  * (C) Copyright 2012-2014
  *     Texas Instruments Incorporated, <www.ti.com>
  */
-#include <common.h>
 #include <command.h>
 #include <console.h>
-#include <asm/global_data.h>
 #include <linux/delay.h>
 #include <linux/printk.h>
 
@@ -26,8 +24,6 @@
 #include <asm/arch/psc_defs.h>
 
 #include "cpsw_mdio.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef KEYSTONE2_EMAC_GIG_ENABLE
 #define emac_gigabit_enable(x)	keystone2_eth_gigabit_enable(x)
@@ -83,7 +79,6 @@ enum link_type {
 					 (x) * 0x1000)
 
 #endif
-
 
 struct ks2_eth_priv {
 	struct udevice			*dev;
@@ -208,7 +203,6 @@ int keystone_sgmii_config(struct phy_device *phy_dev, int port, int interface)
 
 	__raw_writel(mr_adv_ability, SGMII_MRADV_REG(port));
 	__raw_writel(control, SGMII_CTL_REG(port));
-
 
 	mask = SGMII_REG_STATUS_LINK;
 

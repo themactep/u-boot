@@ -9,7 +9,6 @@
  * Based on the dsps "glue layer" code.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <asm/global_data.h>
 #include <dm/device_compat.h>
@@ -280,7 +279,7 @@ static const struct udevice_id pic32_musb_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(usb_musb) = {
+U_BOOT_DRIVER(musb_pic32) = {
 	.name		= "pic32-musb",
 	.id		= UCLASS_USB,
 	.of_match	= pic32_musb_ids,

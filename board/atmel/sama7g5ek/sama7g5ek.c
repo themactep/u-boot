@@ -4,7 +4,7 @@
  *		      Eugen Hristev <eugen.hristev@microchip.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <debug_uart.h>
 #include <init.h>
 #include <asm/global_data.h>
@@ -45,11 +45,6 @@ void board_debug_uart_init(void)
 	board_uart0_hw_init();
 }
 #endif
-
-int board_early_init_f(void)
-{
-	return 0;
-}
 
 #define MAC24AA_MAC_OFFSET     0xfa
 

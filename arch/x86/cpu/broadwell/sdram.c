@@ -7,7 +7,6 @@
 
 #define LOG_CATEGORY UCLASS_RAM
 
-#include <common.h>
 #include <dm.h>
 #include <init.h>
 #include <log.h>
@@ -206,7 +205,7 @@ static const struct udevice_id broadwell_syscon_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(syscon_intel_me) = {
+U_BOOT_DRIVER(syscon_intel_me_broadwell) = {
 	.name = "intel_me_syscon",
 	.id = UCLASS_SYSCON,
 	.of_match = broadwell_syscon_ids,

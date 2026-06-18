@@ -12,7 +12,9 @@
 #define _BOOTSTAGE_H
 
 #include <linux/types.h>
+#ifdef USE_HOSTCC
 #include <linux/kconfig.h>
+#endif
 
 /* Flags for each bootstage record */
 enum bootstage_flags {
@@ -71,7 +73,7 @@ enum bootstage_id {
 	BOOTSTAGE_ID_CHECK_RAMDISK = 9,	/* Checking ram disk */
 
 	BOOTSTAGE_ID_RD_MAGIC,		/* Checking ram disk magic */
-	BOOTSTAGE_ID_RD_HDR_CHECKSUM,	/* Checking ram disk heder checksum */
+	BOOTSTAGE_ID_RD_HDR_CHECKSUM,	/* Checking ram disk header checksum */
 	BOOTSTAGE_ID_RD_CHECKSUM,	/* Checking ram disk checksum */
 	BOOTSTAGE_ID_COPY_RAMDISK = 12,	/* Copying ram disk into place */
 	BOOTSTAGE_ID_RAMDISK,		/* Checking for valid ramdisk */
@@ -147,7 +149,6 @@ enum bootstage_id {
 
 	BOOTSTAGE_ID_FIT_CONFIG = 110,
 	BOOTSTAGE_ID_FIT_TYPE,
-	BOOTSTAGE_ID_FIT_KERNEL_INFO,
 
 	BOOTSTAGE_ID_FIT_COMPRESSION,
 	BOOTSTAGE_ID_FIT_OS,
@@ -257,7 +258,7 @@ void show_boot_progress(int val);
  * relocation, since memory can be overwritten later.
  * Return: Always returns 0, to indicate success
  */
-int bootstage_relocate(void);
+int bootstage_relocate(void *to);
 
 /**
  * Add a new bootstage record
@@ -370,9 +371,10 @@ int bootstage_unstash(const void *base, int size);
 /**
  * bootstage_get_size() - Get the size of the bootstage data
  *
+ * @add_strings: true to add the size of attached strings (for stashing)
  * Return: size of boostage data in bytes
  */
-int bootstage_get_size(void);
+int bootstage_get_size(bool add_strings);
 
 /**
  * bootstage_init() - Prepare bootstage for use
@@ -394,7 +396,7 @@ static inline ulong bootstage_add_record(enum bootstage_id id,
  * and won't even do that unless CONFIG_SHOW_BOOT_PROGRESS is defined
  */
 
-static inline int bootstage_relocate(void)
+static inline int bootstage_relocate(void *to)
 {
 	return 0;
 }
@@ -433,6 +435,14 @@ static inline uint32_t bootstage_accum(enum bootstage_id id)
 	return 0;
 }
 
+static inline void bootstage_report(void)
+{
+}
+
+static inline void bootstage_fdt_add_report(void)
+{
+}
+
 static inline int bootstage_stash(void *base, int size)
 {
 	return 0;	/* Pretend to succeed */
@@ -443,7 +453,7 @@ static inline int bootstage_unstash(const void *base, int size)
 	return 0;	/* Pretend to succeed */
 }
 
-static inline int bootstage_get_size(void)
+static inline int bootstage_get_size(bool add_strings)
 {
 	return 0;
 }

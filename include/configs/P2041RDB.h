@@ -148,7 +148,8 @@
  * open - index 2
  * shorted - index 1
  */
-#define CFG_SYS_NS16550_CLK		(get_bus_freq(0)/2)
+
+#define CFG_SYS_NS16550_CLK          (get_bus_freq(0) / 2)
 
 #define CFG_SYS_BAUDRATE_TABLE	\
 	{300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200}
@@ -159,7 +160,6 @@
 #define CFG_SYS_NS16550_COM4	(CFG_SYS_CCSRBAR+0x11D600)
 
 /* I2C */
-
 
 /*
  * RapidIO

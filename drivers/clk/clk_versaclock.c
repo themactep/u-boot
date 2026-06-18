@@ -5,7 +5,6 @@
  * Derived from code Copyright (C) 2017 Marek Vasut <marek.vasut@gmail.com>
  */
 
-#include <common.h>
 #include <clk.h>
 #include <clk-uclass.h>
 #include <dm.h>
@@ -851,7 +850,7 @@ static char *versaclock_get_name(const char *dev_name, const char *clk_name, int
 
 	buf = malloc(length);
 	if (!buf)
-		ERR_PTR(-ENOMEM);
+		return ERR_PTR(-ENOMEM);
 
 	if (index < 0)
 		snprintf(buf, length, "%s.%s", dev_name, clk_name);
@@ -905,12 +904,12 @@ int versaclock_probe(struct udevice *dev)
 	if (IS_ERR(mux_name))
 		return PTR_ERR(mux_name);
 
-	clk_register(&vc5->clk_mux, "versaclock-mux", mux_name, vc5->pin_xin->dev->name);
-
-	if (!IS_ERR(vc5->pin_xin))
+	if (!IS_ERR(vc5->pin_xin)) {
+		clk_register(&vc5->clk_mux, "versaclock-mux", mux_name, vc5->pin_xin->dev->name);
 		vc5_mux_set_parent(&vc5->clk_mux, 1);
-	else
+	} else {
 		vc5_mux_set_parent(&vc5->clk_mux, 0);
+	}
 
 	/* Configure Optional Loading Capacitance for external XTAL */
 	if (!(vc5->chip_info->flags & VC5_HAS_INTERNAL_XTAL)) {
@@ -1000,26 +999,18 @@ int versaclock_probe(struct udevice *dev)
 	return 0;
 
 free_out:
-	for (n = 1; n < vc5->chip_info->clk_out_cnt; n++) {
-		clk_free(&vc5->clk_out[n].hw);
+	for (n = 1; n < vc5->chip_info->clk_out_cnt; n++)
 		free(out_name[n]);
-	}
 free_selb:
-	clk_free(&vc5->clk_out[0].hw);
 	free(outsel_name);
 free_fod:
-	for (n = 0; n < vc5->chip_info->clk_fod_cnt; n++) {
-		clk_free(&vc5->clk_fod[n].hw);
+	for (n = 0; n < vc5->chip_info->clk_fod_cnt; n++)
 		free(fod_name[n]);
-	}
 free_pll:
-	clk_free(&vc5->clk_pll.hw);
 	free(pll_name);
 free_pfd:
-	clk_free(&vc5->clk_pfd);
 	free(pfd_name);
 free_mux:
-	clk_free(&vc5->clk_mux);
 	free(mux_name);
 
 	return ret;

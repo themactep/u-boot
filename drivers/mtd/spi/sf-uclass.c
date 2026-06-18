@@ -5,19 +5,15 @@
 
 #define LOG_CATEGORY UCLASS_SPI_FLASH
 
-#include <common.h>
 #include <bootdev.h>
 #include <dm.h>
 #include <log.h>
 #include <malloc.h>
 #include <spi.h>
 #include <spi_flash.h>
-#include <asm/global_data.h>
 #include <dm/device-internal.h>
 #include <test/test.h>
 #include "sf_internal.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 int spi_flash_read_dm(struct udevice *dev, u32 offset, size_t len, void *buf)
 {
@@ -55,7 +51,7 @@ struct spi_flash *spi_flash_probe(unsigned int busnum, unsigned int cs,
 	struct udevice *bus;
 	char *str;
 
-#if defined(CONFIG_SPL_BUILD) && CONFIG_IS_ENABLED(USE_TINY_PRINTF)
+#if defined(CONFIG_XPL_BUILD) && CONFIG_IS_ENABLED(USE_TINY_PRINTF)
 	str = "spi_flash";
 #else
 	char name[30];

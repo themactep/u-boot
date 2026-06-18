@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /* Copyright 2023 Logic PD, Inc dba Beacon EmbeddedWorks */
 
-#include <common.h>
 #include <init.h>
 #include <miiphy.h>
 #include <asm/arch/sys_proto.h>
@@ -15,7 +14,7 @@ static void setup_fec(void)
 	setbits_le32(&gpr->gpr[1], BIT(22));
 }
 
-#if IS_ENABLED(CONFIG_NET)
+#if IS_ENABLED(CONFIG_NET_LEGACY)
 int board_phy_config(struct phy_device *phydev)
 {
 	if (phydev->drv->config)

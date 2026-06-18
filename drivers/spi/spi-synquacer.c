@@ -6,7 +6,6 @@
  */
 
 #include <clk.h>
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <time.h>
@@ -100,8 +99,6 @@
 #define TXBIT	1
 #define RXBIT	2
 
-DECLARE_GLOBAL_DATA_PTR;
-
 struct synquacer_spi_plat {
 	void __iomem *base;
 	bool aces, rtm;
@@ -194,12 +191,12 @@ static void synquacer_spi_config(struct udevice *dev, void *rx, const void *tx)
 	/* if nothing to do */
 	if (slave_plat->mode == priv->mode &&
 	    rwflag == priv->rwflag &&
-	    slave_plat->cs == priv->cs &&
+	    slave_plat->cs[0] == priv->cs &&
 	    slave_plat->max_hz == priv->speed)
 		return;
 
 	priv->rwflag = rwflag;
-	priv->cs = slave_plat->cs;
+	priv->cs = slave_plat->cs[0];
 	priv->mode = slave_plat->mode;
 	priv->speed = slave_plat->max_hz;
 

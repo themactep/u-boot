@@ -5,6 +5,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/reset/nuvoton,npcm8xx-reset.h>
 
 / {
 	#address-cells = <2>;
@@ -59,6 +60,11 @@
 			compatible = "nuvoton,npcm845-clk";
 			#clock-cells = <1>;
 			reg = <0x0 0xf0801000 0x0 0x1000>;
+		};
+
+		timer0: timer@f0801068 {
+			compatible = "nuvoton,npcm845-timer";
+			reg = <0x0 0xf0801068 0x0 0x8>;
 		};
 
 		sdhci0: sdhci@f0842000 {
@@ -133,7 +139,16 @@
 			ranges = <0x0 0x0 0xf0000000 0x00300000>,
 				<0xfff00000 0x0 0xfff00000 0x00016000>;
 
-			spi1: spi@201000 {
+			host_intf: host_intf@9f000 {
+				compatible = "nuvoton,npcm845-host-intf";
+				reg = <0x9f000 0x1000>, <0x7000 0x40>;
+				type = "espi";
+				ioaddr = <0x4e>;
+				channel-support = <0xf>;
+				syscon = <&gcr>;
+			};
+
+			pspi: spi@201000 {
 				compatible = "nuvoton,npcm845-pspi";
 				reg = <0x201000 0x1000>;
 				pinctrl-names = "default";
@@ -143,15 +158,8 @@
 				interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk NPCM8XX_CLK_APB5>;
 				clock-names = "clk_apb5";
+				resets = <&rstc NPCM8XX_RESET_IPSRST2 NPCM8XX_RESET_PSPI2>;
 				status = "disabled";
-			};
-
-			timer0: timer@8000 {
-				compatible = "nuvoton,npcm845-timer";
-				interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
-				reg = <0x8000 0x1C>;
-				clocks = <&clk NPCM8XX_CLK_REFCLK>;
-				clock-names = "refclk";
 			};
 
 			serial0: serial@0 {

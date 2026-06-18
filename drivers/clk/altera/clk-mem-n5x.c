@@ -3,9 +3,7 @@
  * Copyright (C) 2020-2022 Intel Corporation <www.intel.com>
  */
 
-#include <common.h>
 #include <asm/arch/clock_manager.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include "clk-mem-n5x.h"
 #include <clk-uclass.h>
@@ -13,8 +11,6 @@
 #include <dm/lists.h>
 #include <dm/util.h>
 #include <dt-bindings/clock/n5x-clock.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct socfpga_mem_clk_plat {
 	void __iomem *regs;

@@ -6,11 +6,11 @@
 #ifndef _BOOTCOUNT_H__
 #define _BOOTCOUNT_H__
 
-#include <common.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/byteorder.h>
 #include <env.h>
+#include <linux/bitops.h>
 
 #ifdef CONFIG_DM_BOOTCOUNT
 
@@ -59,6 +59,10 @@ int dm_bootcount_get(struct udevice *dev, u32 *bootcount);
 int dm_bootcount_set(struct udevice *dev, u32 bootcount);
 
 #endif
+
+/* Bit masks for magic and count parts in single word scheme */
+#define BOOTCOUNT_MAGIC_MASK	GENMASK(31, 16)
+#define BOOTCOUNT_COUNT_MASK	GENMASK(15, 0)
 
 /** bootcount_store() - store the current bootcount */
 void bootcount_store(ulong);
@@ -121,13 +125,13 @@ static inline void bootcount_inc(void)
 		return;
 	}
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_XPL_BUILD
 	/* Only increment bootcount when no bootcount support in SPL */
 #if !defined(CONFIG_SPL_BOOTCOUNT_LIMIT) && !defined(CONFIG_TPL_BOOTCOUNT_LIMIT)
 	bootcount_store(++bootcount);
 #endif
 	env_set_ulong("bootcount", bootcount);
-#endif /* !CONFIG_SPL_BUILD */
+#endif /* !CONFIG_XPL_BUILD */
 }
 
 #else

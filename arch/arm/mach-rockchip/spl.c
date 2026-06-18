@@ -3,16 +3,19 @@
  * (C) Copyright 2019 Rockchip Electronics Co., Ltd
  */
 
-#include <common.h>
+#include <binman_sym.h>
+#include <cpu_func.h>
 #include <debug_uart.h>
 #include <dm.h>
 #include <hang.h>
 #include <image.h>
 #include <init.h>
 #include <log.h>
+#include <mapmem.h>
 #include <ram.h>
 #include <spl.h>
 #include <asm/arch-rockchip/bootrom.h>
+#include <asm/arch-rockchip/timer.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/bitops.h>
@@ -30,20 +33,43 @@ int board_return_to_bootrom(struct spl_image_info *spl_image,
 __weak const char * const boot_devices[BROM_LAST_BOOTSOURCE + 1] = {
 };
 
+__weak u32 read_brom_bootsource_id(void)
+{
+	u32 bootsource_id = readl(BROM_BOOTSOURCE_ID_ADDR);
+
+	/* Re-map the raw value read from reg to an existing BROM_BOOTSOURCE
+	 * enum value to avoid having to create a larger boot_devices table.
+	 */
+	if (bootsource_id == 0x81)
+		return BROM_BOOTSOURCE_USB;
+	else if (bootsource_id > BROM_LAST_BOOTSOURCE)
+		log_debug("Unknown bootsource %x\n", bootsource_id);
+
+	return bootsource_id;
+}
+
 const char *board_spl_was_booted_from(void)
 {
-	u32  bootdevice_brom_id = readl(BROM_BOOTSOURCE_ID_ADDR);
+	static u32 brom_bootsource_id_cache = BROM_BOOTSOURCE_UNKNOWN;
+	u32 bootdevice_brom_id;
 	const char *bootdevice_ofpath = NULL;
+
+	if (brom_bootsource_id_cache != BROM_BOOTSOURCE_UNKNOWN)
+		bootdevice_brom_id = brom_bootsource_id_cache;
+	else
+		bootdevice_brom_id = read_brom_bootsource_id();
 
 	if (bootdevice_brom_id < ARRAY_SIZE(boot_devices))
 		bootdevice_ofpath = boot_devices[bootdevice_brom_id];
 
-	if (bootdevice_ofpath)
+	if (bootdevice_ofpath) {
+		brom_bootsource_id_cache = bootdevice_brom_id;
 		debug("%s: brom_bootdevice_id %x maps to '%s'\n",
 		      __func__, bootdevice_brom_id, bootdevice_ofpath);
-	else
+	} else {
 		debug("%s: failed to resolve brom_bootdevice_id %x\n",
 		      __func__, bootdevice_brom_id);
+	}
 
 	return bootdevice_ofpath;
 }
@@ -69,33 +95,6 @@ u32 spl_boot_device(void)
 u32 spl_mmc_boot_mode(struct mmc *mmc, const u32 boot_device)
 {
 	return MMCSD_MODE_RAW;
-}
-
-#define TIMER_LOAD_COUNT_L	0x00
-#define TIMER_LOAD_COUNT_H	0x04
-#define TIMER_CONTROL_REG	0x10
-#define TIMER_EN	0x1
-#define	TIMER_FMODE	BIT(0)
-#define	TIMER_RMODE	BIT(1)
-
-__weak void rockchip_stimer_init(void)
-{
-#if defined(CONFIG_ROCKCHIP_STIMER_BASE)
-	/* If Timer already enabled, don't re-init it */
-	u32 reg = readl(CONFIG_ROCKCHIP_STIMER_BASE + TIMER_CONTROL_REG);
-
-	if (reg & TIMER_EN)
-		return;
-#ifndef CONFIG_ARM64
-	asm volatile("mcr p15, 0, %0, c14, c0, 0"
-		     : : "r"(CONFIG_COUNTER_FREQUENCY));
-#endif
-	writel(0, CONFIG_ROCKCHIP_STIMER_BASE + TIMER_CONTROL_REG);
-	writel(0xffffffff, CONFIG_ROCKCHIP_STIMER_BASE);
-	writel(0xffffffff, CONFIG_ROCKCHIP_STIMER_BASE + 4);
-	writel(TIMER_EN | TIMER_FMODE, CONFIG_ROCKCHIP_STIMER_BASE +
-	       TIMER_CONTROL_REG);
-#endif
 }
 
 __weak int board_early_init_f(void)
@@ -136,6 +135,69 @@ void board_init_f(ulong dummy)
 	}
 	gd->ram_top = gd->ram_base + get_effective_memsize();
 	gd->ram_top = board_get_usable_ram_top(gd->ram_size);
+
+	if (IS_ENABLED(CONFIG_ARM64) && !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)) {
+		gd->relocaddr = gd->ram_top;
+		arch_reserve_mmu();
+		enable_caches();
+	}
 #endif
 	preloader_console_init();
 }
+
+void spl_board_prepare_for_boot(void)
+{
+	if (!IS_ENABLED(CONFIG_ARM64) || CONFIG_IS_ENABLED(SYS_DCACHE_OFF))
+		return;
+
+	cleanup_before_linux();
+}
+
+#if CONFIG_IS_ENABLED(RAM_DEVICE) && IS_ENABLED(CONFIG_SPL_LOAD_FIT)
+binman_sym_declare_optional(ulong, payload, image_pos);
+binman_sym_declare_optional(ulong, payload, size);
+
+static ulong ramboot_load_read(struct spl_load_info *load, ulong sector,
+			       ulong count, void *buf)
+{
+	ulong addr = IF_ENABLED_INT(CONFIG_SPL_LOAD_FIT,
+				    CONFIG_SPL_LOAD_FIT_ADDRESS);
+
+	memcpy(buf, map_sysmem(addr + sector, 0), count);
+	return count;
+}
+
+static int ramboot_load_image(struct spl_image_info *spl_image,
+			      struct spl_boot_device *bootdev)
+{
+	struct legacy_img_hdr *header;
+	ulong addr = IF_ENABLED_INT(CONFIG_SPL_LOAD_FIT,
+				    CONFIG_SPL_LOAD_FIT_ADDRESS);
+	ulong image_pos = binman_sym(ulong, payload, image_pos);
+	ulong size = binman_sym(ulong, payload, size);
+
+	if (addr == CFG_SYS_SDRAM_BASE || addr == CONFIG_SPL_TEXT_BASE)
+		return -ENODEV;
+
+	if (image_pos != BINMAN_SYM_MISSING && size != BINMAN_SYM_MISSING) {
+		header = map_sysmem(image_pos, 0);
+		if (image_get_magic(header) == FDT_MAGIC) {
+			memmove(map_sysmem(addr, 0), header, size);
+			memset(header, 0, sizeof(*header));
+		}
+	}
+
+	header = map_sysmem(addr, 0);
+	if (image_get_magic(header) == FDT_MAGIC) {
+		struct spl_load_info load;
+
+		spl_load_init(&load, ramboot_load_read, NULL, 1);
+		return spl_load_simple_fit(spl_image, &load, 0, header);
+	}
+
+	return -ENODEV;
+}
+
+/* Use priority and method name that sort before default spl_ram_load_image */
+SPL_LOAD_IMAGE_METHOD("RAM", 0, BOOT_DEVICE_RAM, ramboot_load_image);
+#endif

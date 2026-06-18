@@ -11,10 +11,6 @@ ENTRY(_start)
 
 SECTIONS
 {
-#ifndef CONFIG_CMDLINE
-	/DISCARD/ : { *(__u_boot_list_2_cmd_*) }
-#endif
-
 	. = IMAGE_TEXT_BASE;	/* Location of bootcode in flash */
 	__text_start = .;
 	.text  : {
@@ -72,7 +68,7 @@ SECTIONS
 		__bss_start = .;
 		*(.bss*)
 		*(COM*)
-		. = ALIGN(4);
+		. = ALIGN(8);
 		__bss_end = .;
 	}
 	__bss_size = __bss_end - __bss_start;
@@ -101,3 +97,11 @@ SECTIONS
 #endif
 
 }
+
+ASSERT(_image_binary_end % 8 == 0, \
+       "_image_binary_end must be 8-byte aligned for device tree");
+
+#if !CONFIG_IS_ENABLED(SEPARATE_BSS)
+ASSERT(__bss_end % 8 == 0, \
+       "__bss_end must be 8-byte aligned for device tree");
+#endif

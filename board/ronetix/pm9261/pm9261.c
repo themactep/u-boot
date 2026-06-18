@@ -7,7 +7,7 @@
  * Copyright (C) 2009 Jean-Christopher PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <init.h>
 #include <vsprintf.h>
 #include <asm/global_data.h>
@@ -75,11 +75,6 @@ static void pm9261_nand_hw_init(void)
 	at91_set_a_periph(AT91_PIO_PORTC, 1, 0);	/* NANDWE */
 }
 #endif
-
-int board_early_init_f(void)
-{
-	return 0;
-}
 
 int board_init(void)
 {

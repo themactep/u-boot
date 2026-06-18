@@ -13,6 +13,7 @@ import unittest
 
 from binman import elf
 from u_boot_pylib import command
+from u_boot_pylib import terminal
 from u_boot_pylib import test_util
 from u_boot_pylib import tools
 from u_boot_pylib import tout
@@ -37,7 +38,7 @@ class FakeSection:
     """A fake Section object, used for testing
 
     This has the minimum feature set needed to support testing elf functions.
-    A LookupSymbol() function is provided which returns a fake value for amu
+    A GetSymbolValue() function is provided which returns a fake value for any
     symbol requested.
     """
     def __init__(self, sym_value=1):
@@ -46,7 +47,7 @@ class FakeSection:
     def GetPath(self):
         return 'section_path'
 
-    def LookupImageSymbol(self, name, weak, msg, base_addr):
+    def GetImageSymbolValue(self, name, weak, msg, base_addr):
         """Fake implementation which returns the same value for all symbols"""
         return self.sym_value
 
@@ -187,7 +188,7 @@ class TestElf(unittest.TestCase):
             entry = FakeEntry(24)
             section = FakeSection()
             elf_fname = self.ElfTestFile('u_boot_binman_syms')
-            with test_util.capture_sys_output() as (stdout, stderr):
+            with terminal.capture() as (stdout, stderr):
                 elf.LookupAndWriteSymbols(elf_fname, entry, section)
             self.assertTrue(len(stdout.getvalue()) > 0)
         finally:
@@ -249,8 +250,8 @@ class TestElf(unittest.TestCase):
 
     def testEmbedFail(self):
         """Test calling GetSymbolFileOffset() without elftools"""
+        old_val = elf.ELF_TOOLS
         try:
-            old_val = elf.ELF_TOOLS
             elf.ELF_TOOLS = False
             fname = self.ElfTestFile('embed_data')
             with self.assertRaises(ValueError) as e:
@@ -290,8 +291,8 @@ class TestElf(unittest.TestCase):
 
     def test_read_segments_fail(self):
         """Test for read_loadable_segments() without elftools"""
+        old_val = elf.ELF_TOOLS
         try:
-            old_val = elf.ELF_TOOLS
             elf.ELF_TOOLS = False
             fname = self.ElfTestFile('embed_data')
             with self.assertRaises(ValueError) as e:
@@ -327,8 +328,8 @@ class TestElf(unittest.TestCase):
 
     def test_get_file_offset_fail(self):
         """Test calling GetFileOffset() without elftools"""
+        old_val = elf.ELF_TOOLS
         try:
-            old_val = elf.ELF_TOOLS
             elf.ELF_TOOLS = False
             fname = self.ElfTestFile('embed_data')
             with self.assertRaises(ValueError) as e:
@@ -351,8 +352,8 @@ class TestElf(unittest.TestCase):
 
     def test_get_symbol_from_address_fail(self):
         """Test calling GetSymbolFromAddress() without elftools"""
+        old_val = elf.ELF_TOOLS
         try:
-            old_val = elf.ELF_TOOLS
             elf.ELF_TOOLS = False
             fname = self.ElfTestFile('embed_data')
             with self.assertRaises(ValueError) as e:

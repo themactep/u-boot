@@ -18,6 +18,8 @@
 #include <efi_selftest.h>
 #include "efi_selftest_disk_image.h"
 #include <asm/cache.h>
+#include <part_efi.h>
+#include <part.h>
 
 /* Block size of compressed disk image */
 #define COMPRESSED_DISK_IMAGE_BLOCK_SIZE 8
@@ -29,6 +31,7 @@ static struct efi_boot_services *boottime;
 
 static const efi_guid_t block_io_protocol_guid = EFI_BLOCK_IO_PROTOCOL_GUID;
 static const efi_guid_t guid_device_path = EFI_DEVICE_PATH_PROTOCOL_GUID;
+static const efi_guid_t partition_info_guid = EFI_PARTITION_INFO_PROTOCOL_GUID;
 static const efi_guid_t guid_simple_file_system_protocol =
 					EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
 static const efi_guid_t guid_file_system_info = EFI_FILE_SYSTEM_INFO_GUID;
@@ -310,11 +313,31 @@ static int execute(void)
 		struct efi_file_system_info info;
 		u16 label[12];
 	} system_info;
+	struct efi_partition_info *part_info;
 	efi_uintn_t buf_size;
 	char buf[16] __aligned(ARCH_DMA_MINALIGN);
 	u32 part1_size;
 	u64 pos;
 	char block_io_aligned[1 << LB_BLOCK_SIZE] __aligned(1 << LB_BLOCK_SIZE);
+
+	/*
+	 * The test disk image is defined in efi_selftest_disk_image.h,
+	 * it contains a single FAT12 partition of 127 sectors size.
+	 */
+	static const dos_partition_t mbr_expected = {
+		.boot_ind = 0x00,
+		.head = 0x00,
+		.sector = 0x02,
+		.cyl = 0x00,
+		.sys_ind = 0x01, /* FAT12 */
+		.end_head = 0x02,
+		.end_sector = 0x02,
+		.end_cyl = 0x00,
+		/* LBA 1 */
+		.start_sect = cpu_to_le32(1),
+		/* Size 127 sectors (0x7f) */
+		.nr_sects = cpu_to_le32(127),
+	};
 
 	/* Connect controller to virtual disk */
 	ret = boottime->connect_controller(disk_handle, NULL, NULL, 1);
@@ -375,6 +398,39 @@ static int execute(void)
 			     part1_size - 1);
 		return EFI_ST_FAILURE;
 	}
+
+	/* Open the partition information protocol  */
+	ret = boottime->open_protocol(handle_partition,
+				      &partition_info_guid,
+				      (void **)&part_info, NULL, NULL,
+				      EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+	if (ret != EFI_SUCCESS) {
+		efi_st_error("Failed to open partition information protocol\n");
+		return EFI_ST_FAILURE;
+	}
+	/* Check that cached partition information is the expected */
+	if (part_info->revision != EFI_PARTITION_INFO_PROTOCOL_REVISION) {
+		efi_st_error("Partition info revision %x, expected %x\n",
+			     part_info->revision, EFI_PARTITION_INFO_PROTOCOL_REVISION);
+		return EFI_ST_FAILURE;
+	}
+	if (part_info->type != PARTITION_TYPE_MBR) {
+		efi_st_error("Partition info type %x, expected %x\n",
+			     part_info->type, PARTITION_TYPE_MBR);
+		return EFI_ST_FAILURE;
+	}
+	if (part_info->system != 0) {
+		efi_st_error("Partition info system %x, expected 0\n",
+			     part_info->system);
+		return EFI_ST_FAILURE;
+	}
+
+	/* Compare the obtained MBR with the expected one for the test partition */
+	if (memcmp(&part_info->info.mbr, &mbr_expected, sizeof(mbr_expected))) {
+		efi_st_error("MBR partition record mismatch\n");
+		return EFI_ST_FAILURE;
+	}
+
 	/* Open the simple file system protocol */
 	ret = boottime->open_protocol(handle_partition,
 				      &guid_simple_file_system_protocol,

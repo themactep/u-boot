@@ -14,8 +14,15 @@
 #include <image.h>
 #include <version.h>
 
+#if CONFIG_IS_ENABLED(FIT_SIGNATURE)
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#endif
+
+#if CONFIG_IS_ENABLED(IMAGE_PRE_LOAD) && CONFIG_IS_ENABLED(LIBCRYPTO)
+#include <openssl/rsa.h>
+#include <openssl/err.h>
+#endif
 
 /**
  * fit_set_hash_value - set hash value in requested has node
@@ -340,33 +347,68 @@ err:
 	return ret;
 }
 
-static int get_random_data(void *data, int size)
+static int fit_image_read_key_iv_data(const char *keydir, const char *key_iv_name,
+				      unsigned char *key_iv_data, int expected_size)
 {
-	unsigned char *tmp = data;
-	struct timespec date;
-	int i, ret;
+	char filename[PATH_MAX];
+	int ret;
 
-	if (!tmp) {
-		fprintf(stderr, "%s: pointer data is NULL\n", __func__);
-		ret = -1;
-		goto out;
+	ret = snprintf(filename, sizeof(filename), "%s/%s%s",
+		       keydir, key_iv_name, ".bin");
+	if (ret >= sizeof(filename)) {
+		fprintf(stderr, "Can't format the key or IV filename when setting up the cipher: insufficient buffer space\n");
+		return -1;
+	}
+	if (ret < 0) {
+		fprintf(stderr, "Can't format the key or IV filename when setting up the cipher: snprintf error\n");
+		return -1;
 	}
 
-	ret = clock_gettime(CLOCK_MONOTONIC, &date);
-	if (ret) {
-		fprintf(stderr, "%s: clock_gettime has failed (%s)\n", __func__,
-			strerror(errno));
-		goto out;
+	ret = fit_image_read_data(filename, key_iv_data, expected_size);
+
+	return ret;
+}
+
+/**
+ * get_random_data() - fill buffer with random data
+ *
+ * There is no common cryptographically safe function in Linux and BSD.
+ * Hence directly access the /dev/urandom PRNG.
+ *
+ * @data:	buffer to fill
+ * @size:	buffer size
+ */
+static int get_random_data(void *data, size_t size)
+{
+	int fd;
+	int ret;
+
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd < 0) {
+		perror("Failed to open /dev/urandom");
+		return -1;
 	}
 
-	srandom(date.tv_nsec);
+	while (size) {
+		ssize_t count;
 
-	for (i = 0; i < size; i++) {
-		*tmp = random() & 0xff;
-		tmp++;
+		count = read(fd, data, size);
+		if (count < 0) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				perror("Failed to read from /dev/urandom");
+				ret = -1;
+				goto out;
+			}
+		}
+		data += count;
+		size -= count;
 	}
+	ret = 0;
+out:
+	close(fd);
 
- out:
 	return ret;
 }
 
@@ -376,7 +418,6 @@ static int fit_image_setup_cipher(struct image_cipher_info *info,
 				  int noffset)
 {
 	char *algo_name;
-	char filename[128];
 	int ret = -1;
 
 	if (fit_image_cipher_get_algo(fit, noffset, &algo_name)) {
@@ -413,17 +454,17 @@ static int fit_image_setup_cipher(struct image_cipher_info *info,
 		goto out;
 	}
 
-	/* Read the key in the file */
-	snprintf(filename, sizeof(filename), "%s/%s%s",
-		 info->keydir, info->keyname, ".bin");
 	info->key = malloc(info->cipher->key_len);
 	if (!info->key) {
 		fprintf(stderr, "Can't allocate memory for key\n");
 		ret = -1;
 		goto out;
 	}
-	ret = fit_image_read_data(filename, (unsigned char *)info->key,
-				  info->cipher->key_len);
+
+	/* Read the key in the file */
+	ret = fit_image_read_key_iv_data(info->keydir, info->keyname,
+					 (unsigned char *)info->key,
+					 info->cipher->key_len);
 	if (ret < 0)
 		goto out;
 
@@ -436,10 +477,11 @@ static int fit_image_setup_cipher(struct image_cipher_info *info,
 
 	if (info->ivname) {
 		/* Read the IV in the file */
-		snprintf(filename, sizeof(filename), "%s/%s%s",
-			 info->keydir, info->ivname, ".bin");
-		ret = fit_image_read_data(filename, (unsigned char *)info->iv,
-					  info->cipher->iv_len);
+		ret = fit_image_read_key_iv_data(info->keydir, info->ivname,
+						 (unsigned char *)info->iv,
+						 info->cipher->iv_len);
+		if (ret < 0)
+			goto out;
 	} else {
 		/* Generate an ramdom IV */
 		ret = get_random_data((void *)info->iv, info->cipher->iv_len);
@@ -511,7 +553,7 @@ fit_image_process_cipher(const char *keydir, void *keydest, void *fit,
 	 * size values
 	 * And, if needed, write the iv in the FIT file
 	 */
-	if (keydest) {
+	if (keydest || (!keydest && !info.ivname)) {
 		ret = info.cipher->add_cipher_data(&info, keydest, fit, node_noffset);
 		if (ret) {
 			fprintf(stderr,
@@ -550,7 +592,7 @@ int fit_image_cipher_data(const char *keydir, void *keydest,
 	}
 
 	/* Get image data and data length */
-	if (fit_image_get_data(fit, image_noffset, &data, &size)) {
+	if (fit_image_get_emb_data(fit, image_noffset, &data, &size)) {
 		fprintf(stderr, "Can't get image data/size\n");
 		return -1;
 	}
@@ -608,7 +650,7 @@ int fit_image_cipher_data(const char *keydir, void *keydest,
  *     |- algo = "sha1"
  *     |- value = sha1(data)
  *
- * For signature details, please see doc/uImage.FIT/signature.txt
+ * For signature details, please see doc/usage/fit/signature.rst
  *
  * @keydir	Directory containing *.key and *.crt files (or NULL)
  * @keydest	FDT Blob to write public keys into (NULL if none)
@@ -630,7 +672,7 @@ int fit_image_add_verification_data(const char *keydir, const char *keyfile,
 	int noffset;
 
 	/* Get image data and data length */
-	if (fit_image_get_data(fit, image_noffset, &data, &size)) {
+	if (fit_image_get_emb_data(fit, image_noffset, &data, &size)) {
 		fprintf(stderr, "Can't get image data/size\n");
 		return -1;
 	}
@@ -654,7 +696,7 @@ int fit_image_add_verification_data(const char *keydir, const char *keyfile,
 			     strlen(FIT_HASH_NODENAME))) {
 			ret = fit_image_process_hash(fit, image_name, noffset,
 						data, size);
-		} else if (IMAGE_ENABLE_SIGN && (keydir || keyfile) &&
+		} else if (IMAGE_ENABLE_SIGN && (keydir || keyfile || engine_id) &&
 			   !strncmp(node_name, FIT_SIG_NODENAME,
 				strlen(FIT_SIG_NODENAME))) {
 			ret = fit_image_process_sig(keydir, keyfile, keydest,
@@ -691,12 +733,22 @@ static void strlist_free(struct strlist *list)
 static int strlist_add(struct strlist *list, const char *str)
 {
 	char *dup;
+	char  **tmp = NULL;
 
-	dup = strdup(str);
-	list->strings = realloc(list->strings,
-				(list->count + 1) * sizeof(char *));
 	if (!list || !str)
 		return -1;
+
+	dup = strdup(str);
+	if(!dup)
+		return -1;
+
+	tmp = realloc(list->strings, (list->count + 1) * sizeof(char *));
+	if (!tmp) {
+		free(dup);
+		return -1;
+	}
+
+	list->strings = tmp;
 	list->strings[list->count++] = dup;
 
 	return 0;
@@ -706,7 +758,7 @@ static const char *fit_config_get_image_list(const void *fit, int noffset,
 					     int *lenp, int *allow_missingp)
 {
 	static const char default_list[] = FIT_KERNEL_PROP "\0"
-			FIT_FDT_PROP;
+			FIT_FDT_PROP "\0" FIT_SCRIPT_PROP;
 	const char *prop;
 
 	/* If there is an "sign-image" property, use that */
@@ -1131,6 +1183,7 @@ static int fit_config_add_verification_data(const char *keydir,
 	return 0;
 }
 
+#if CONFIG_IS_ENABLED(FIT_SIGNATURE)
 /*
  * 0) open file (open)
  * 1) read certificate (PEM_read_X509)
@@ -1239,6 +1292,7 @@ int fit_pre_load_data(const char *keydir, void *keydest, void *fit)
  out:
 	return ret;
 }
+#endif
 
 int fit_cipher_data(const char *keydir, void *keydest, void *fit,
 		    const char *comment, int require_keys,
@@ -1307,13 +1361,13 @@ int fit_add_verification_data(const char *keydir, const char *keyfile,
 		if (ret) {
 			fprintf(stderr, "Can't add verification data for node '%s' (%s)\n",
 				fdt_get_name(fit, noffset, NULL),
-				fdt_strerror(ret));
+				strerror(-ret));
 			return ret;
 		}
 	}
 
 	/* If there are no keys, we can't sign configurations */
-	if (!IMAGE_ENABLE_SIGN || !(keydir || keyfile))
+	if (!IMAGE_ENABLE_SIGN || !(keydir || keyfile || engine_id))
 		return 0;
 
 	/* Find configurations parent node offset */
@@ -1358,6 +1412,142 @@ int fit_check_sign(const void *fit, const void *key,
 		return ret;
 	printf("Verified OK, loading images\n");
 	ret = bootm_host_load_images(fit, cfg_noffset);
+
+	return ret;
+}
+#endif
+
+#if CONFIG_IS_ENABLED(IMAGE_PRE_LOAD) && CONFIG_IS_ENABLED(LIBCRYPTO)
+/**
+ * rsa_verify_openssl() - Verify a signature against some data with openssl API
+ *
+ * Verify a RSA PKCS1.5/PSS signature against an expected hash.
+ *
+ * @info:		Specifies the key and algorithms
+ * @region:		Pointer to the input data
+ * @region_count:	Number of region
+ * @sig:		Signature
+ * @sig_len:		Number of bytes in the signature
+ * Return: 0 if verified, -ve on error
+ */
+int rsa_verify_openssl(struct image_sign_info *info,
+		       const struct image_region region[], int region_count,
+		       uint8_t *sig, uint sig_len)
+{
+	EVP_PKEY *pkey = NULL;
+	EVP_PKEY_CTX *ckey = NULL;
+	EVP_MD_CTX *ctx = NULL;
+	int pad;
+	int size;
+	int i;
+	int ret = 0;
+
+	if (!info) {
+		fprintf(stderr, "No info provided\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!info->key) {
+		fprintf(stderr, "No key provided\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!info->checksum) {
+		fprintf(stderr, "No checksum information\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!info->padding) {
+		fprintf(stderr, "No padding information\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (region_count < 1) {
+		fprintf(stderr, "Invalid value for region_count: %d\n", region_count);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	pkey = (EVP_PKEY *)info->key;
+
+	ckey = EVP_PKEY_CTX_new(pkey, NULL);
+	if (!ckey) {
+		ret = -ENOMEM;
+		fprintf(stderr, "EVK key context setup failed: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
+		goto out;
+	}
+
+	size = EVP_PKEY_size(pkey);
+	if (size > sig_len) {
+		fprintf(stderr, "Invalid signature size (%d bytes)\n",
+			size);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ctx = EVP_MD_CTX_new();
+	if (!ctx) {
+		ret = -ENOMEM;
+		fprintf(stderr, "EVP context creation failed: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
+		goto out;
+	}
+	EVP_MD_CTX_init(ctx);
+
+	if (EVP_DigestVerifyInit(ctx, &ckey,
+				 EVP_get_digestbyname(info->checksum->name),
+				 NULL, pkey) <= 0) {
+		ret = -EINVAL;
+		fprintf(stderr, "Verifier setup failed: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
+		goto out;
+	}
+
+	if (!strcmp(info->padding->name, "pkcs-1.5")) {
+		pad = RSA_PKCS1_PADDING;
+	} else if (!strcmp(info->padding->name, "pss")) {
+		pad = RSA_PKCS1_PSS_PADDING;
+	} else {
+		ret = -ENOMSG;
+		fprintf(stderr, "Unsupported padding: %s\n",
+			info->padding->name);
+		goto out;
+	}
+
+	if (EVP_PKEY_CTX_set_rsa_padding(ckey, pad) <= 0) {
+		ret = -EINVAL;
+		fprintf(stderr, "padding setup has failed: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
+		goto out;
+	}
+
+	for (i=0 ; i < region_count ; ++i) {
+		if (EVP_DigestVerifyUpdate(ctx, region[i].data,
+					   region[i].size) <= 0) {
+			ret = -EINVAL;
+			fprintf(stderr, "Hashing data failed: %s\n",
+				ERR_error_string(ERR_get_error(), NULL));
+			goto out;
+		}
+	}
+
+	if (EVP_DigestVerifyFinal(ctx, sig, sig_len) <= 0) {
+		ret = -EINVAL;
+		fprintf(stderr, "Verifying digest failed: %s\n",
+			ERR_error_string(ERR_get_error(), NULL));
+		goto out;
+	}
+out:
+	if (ctx)
+		EVP_MD_CTX_free(ctx);
+
+	if (ret)
+		fprintf(stderr, "Failed to verify signature\n");
 
 	return ret;
 }

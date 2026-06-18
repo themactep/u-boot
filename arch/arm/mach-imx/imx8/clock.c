@@ -3,12 +3,8 @@
  * Copyright 2018 NXP
  */
 
-#include <common.h>
-#include <asm/global_data.h>
 #include <linux/errno.h>
 #include <asm/arch/clock.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 u32 mxc_get_clock(enum mxc_clock clk)
 {

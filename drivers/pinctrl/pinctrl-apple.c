@@ -3,7 +3,6 @@
  * (C) Copyright 2021 Mark Kettenis <kettenis@openbsd.org>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <dm/device-internal.h>
 #include <dm/pinctrl.h>
@@ -193,6 +192,7 @@ static struct pinctrl_ops apple_pinctrl_ops = {
 };
 
 static const struct udevice_id apple_pinctrl_ids[] = {
+	{ .compatible = "apple,t8103-pinctrl" },
 	{ .compatible = "apple,pinctrl" },
 	{ /* sentinel */ }
 };

@@ -5,7 +5,6 @@
  * Author: Jagan Teki <jagan@amarulasolutions.com>
  */
 
-#include <common.h>
 #include <miiphy.h>
 #include <netdev.h>
 
@@ -19,8 +18,6 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/iomux-v3.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #if IS_ENABLED(CONFIG_FEC_MXC)
 

@@ -8,7 +8,6 @@
  * IDE support
  */
 
-#include <common.h>
 #include <blk.h>
 #include <dm.h>
 #include <config.h>
@@ -20,12 +19,7 @@
 #include <dm/device-internal.h>
 #include <dm/uclass-internal.h>
 
-#include <ide.h>
 #include <ata.h>
-
-#ifdef CONFIG_LED_STATUS
-# include <status_led.h>
-#endif
 
 /* Current I/O Device	*/
 static int curr_device;

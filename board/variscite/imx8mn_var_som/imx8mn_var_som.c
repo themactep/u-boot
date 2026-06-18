@@ -5,14 +5,12 @@
  * Copyright 2023 DimOnOff Inc.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <env.h>
 #include <fdtdec.h>
 #include <fdt_support.h>
 #include <i2c_eeprom.h>
 #include <malloc.h>
-#include <asm/io.h>
 #include <asm/global_data.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <linux/libfdt.h>
@@ -46,29 +44,10 @@ struct var_imx8_eeprom_info {
 	u8 partnumber2[5];        /* Part number 2 */
 } __packed;
 
-static void setup_fec(void)
-{
-	struct iomuxc_gpr_base_regs *gpr =
-		(struct iomuxc_gpr_base_regs *)IOMUXC_GPR_BASE_ADDR;
-
-	/* Use 125M anatop REF_CLK1 for ENET1, not from external */
-	clrsetbits_le32(&gpr->gpr[1], 0x2000, 0);
-}
-
-int board_init(void)
-{
-	if (IS_ENABLED(CONFIG_FEC_MXC))
-		setup_fec();
-
-	return 0;
-}
-
 int board_mmc_get_env_dev(int devno)
 {
 	return devno;
 }
-
-#if !defined(CONFIG_SPL_BUILD)
 
 #if defined(CONFIG_DISPLAY_BOARDINFO)
 
@@ -240,5 +219,3 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	return configure_phy_reset_gpios(blob);
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
-
-#endif /* CONFIG_SPL_BUILD */

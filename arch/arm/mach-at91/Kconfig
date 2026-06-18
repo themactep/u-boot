@@ -11,10 +11,6 @@ config AT91SAM9G20
 	bool
 	select CPU_ARM926EJS
 
-config AT91SAM9XE
-	bool
-	select CPU_ARM926EJS
-
 config AT91SAM9261
 	bool
 	select CPU_ARM926EJS
@@ -47,7 +43,16 @@ config SAM9X60
 	bool
 	select CPU_ARM926EJS
 
+config SAM9X7
+	bool
+	select CPU_ARM926EJS
+
 config SAMA7G5
+	bool
+	select CPU_V7A
+	select AT91RESET_EXTRST
+
+config SAMA7D65
 	bool
 	select CPU_V7A
 	select AT91RESET_EXTRST
@@ -73,11 +78,6 @@ choice
 config TARGET_AT91SAM9260EK
 	bool "Atmel at91sam9260 reference board"
 	select AT91SAM9260
-	select BOARD_EARLY_INIT_F
-
-config TARGET_ETHERNUT5
-	bool "Ethernut5 board"
-	select AT91SAM9XE
 
 config TARGET_GURNARD
 	bool "Support gurnard"
@@ -88,13 +88,13 @@ config TARGET_GURNARD
 	select DM_GPIO
 	select DM_SERIAL
 	select DM_SPI
+	select MTD
 	select SPI
 	imply CMD_DM
 
 config TARGET_AT91SAM9261EK
 	bool "Atmel at91sam9261 reference board"
 	select AT91SAM9261
-	select BOARD_EARLY_INIT_F
 
 config TARGET_PM9261
 	bool "Ronetix pm9261 board"
@@ -103,7 +103,6 @@ config TARGET_PM9261
 config TARGET_AT91SAM9263EK
 	bool "Atmel at91sam9263 reference board"
 	select AT91SAM9263
-	select BOARD_EARLY_INIT_F
 
 config TARGET_USB_A9263
 	bool "Caloa USB A9260 board"
@@ -117,7 +116,6 @@ config TARGET_PM9263
 config TARGET_AT91SAM9M10G45EK
 	bool "Atmel AT91SAM9M10G45-EK board"
 	select AT91SAM9M10G45
-	select BOARD_EARLY_INIT_F
 	select SUPPORT_SPL
 
 config TARGET_PM9G45
@@ -127,18 +125,15 @@ config TARGET_PM9G45
 config TARGET_AT91SAM9N12EK
 	bool "Atmel AT91SAM9N12-EK board"
 	select AT91SAM9N12
-	select BOARD_EARLY_INIT_F
 	select SUPPORT_SPL
 
 config TARGET_AT91SAM9RLEK
 	bool "Atmel at91sam9rl reference board"
 	select AT91SAM9RL
-	select BOARD_EARLY_INIT_F
 
 config TARGET_AT91SAM9X5EK
 	bool "Atmel AT91SAM9X5-EK board"
 	select AT91SAM9X5
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select SUPPORT_SPL
 
@@ -152,24 +147,26 @@ config TARGET_GARDENA_SMART_GATEWAY_AT91SAM
 config TARGET_SAM9X60EK
 	bool "SAM9X60-EK board"
 	select SAM9X60
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 
 config TARGET_SAM9X60_CURIOSITY
         bool "SAM9X60 CURIOSITY board"
         select SAM9X60
-        select BOARD_EARLY_INIT_F
         select BOARD_LATE_INIT
+
+config TARGET_SAM9X75_CURIOSITY
+	bool "SAM9X75 CURIOSITY board"
+	select SAM9X7
+	select BOARD_LATE_INIT
+	imply OF_UPSTREAM
 
 config TARGET_SAMA5D2_PTC_EK
 	bool "SAMA5D2 PTC EK board"
-	select BOARD_EARLY_INIT_F
 	select SAMA5D2
 	select BOARD_LATE_INIT
 
 config TARGET_SAMA5D2_XPLAINED
 	bool "SAMA5D2 Xplained board"
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select SAMA5D2
 	select SUPPORT_SPL
@@ -177,7 +174,6 @@ config TARGET_SAMA5D2_XPLAINED
 config TARGET_SAMA5D27_SOM1_EK
 	bool "SAMA5D27 SOM1 EK board"
 	select SAMA5D2
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select CPU_V7A
 	select SUPPORT_SPL
@@ -192,7 +188,6 @@ config TARGET_SAMA5D27_SOM1_EK
 config TARGET_SAMA5D27_WLSOM1_EK
 	bool "SAMA5D27 WLSOM1 EK board"
 	select SAMA5D2
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select CPU_V7A
 	select SUPPORT_SPL
@@ -219,7 +214,6 @@ config TARGET_SAMA5D2_ICP
 	bool "SAMA5D2 Industrial Connectivity Platform (ICP)"
 	select SAMA5D2
 	select SUPPORT_SPL
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	help
 	  The SAMA5D2 ICP embeds SAMA5D27 rev. C SoC, together with
@@ -239,28 +233,24 @@ config TARGET_SAMA5D29_CURIOSITY
 
 config TARGET_SAMA5D3_XPLAINED
 	bool "SAMA5D3 Xplained board"
-	select BOARD_EARLY_INIT_F
 	select SAMA5D3
 	select SUPPORT_SPL
 	select BOARD_LATE_INIT
 
 config TARGET_SAMA5D3XEK
 	bool "SAMA5D3X-EK board"
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select SAMA5D3
 	select SUPPORT_SPL
 
 config TARGET_SAMA5D4_XPLAINED
 	bool "SAMA5D4 Xplained board"
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select SAMA5D4
 	select SUPPORT_SPL
 
 config TARGET_SAMA5D4EK
 	bool "SAMA5D4 Evaluation Kit"
-	select BOARD_EARLY_INIT_F
 	select BOARD_LATE_INIT
 	select SAMA5D4
 	select SUPPORT_SPL
@@ -282,9 +272,23 @@ config TARGET_CORVUS
 config TARGET_SAMA7G5EK
        bool "SAMA7G5 EK board"
        select SAMA7G5
-       select BOARD_EARLY_INIT_F
        select BOARD_LATE_INIT
 
+config TARGET_SAMA7G54_CURIOSITY
+	bool "SAMA7G54 CURIOSITY board"
+	select SAMA7G5
+	select CPU_V7A
+	help
+	  The SAMA7G54 Curiosity embeds SAMA7G54D2G SiP (System in Package)
+	  with 2Gbit DDR3-SDRAM, 64Mbit QSPI nor-flash with MAC-address,
+	  4Gbit SLC nand-flash, MCP16502 PMIC, 2 x Mikrobus connectors,
+	  1 x SD-Card connector, 1 x M.2 slot, 3 x USB
+
+config TARGET_SAMA7D65_CURIOSITY
+	bool "SAMA7D65 CURIOSITY board"
+	select SAMA7D65
+	select BOARD_LATE_INIT
+	imply OF_UPSTREAM
 
 config TARGET_TAURUS
 	bool "Support taurus"
@@ -294,6 +298,7 @@ config TARGET_TAURUS
 	select DM_GPIO
 	select DM_SERIAL
 	select DM_SPI
+	select MTD
 	select SPI
 	select SUPPORT_SPL
 	imply CMD_DM
@@ -312,6 +317,7 @@ config TARGET_VINCO
 	bool "Support VINCO"
 	select DM
 	select DM_SPI
+	select MTD
 	select SAMA5D4
 	select SPI
 	select SUPPORT_SPL
@@ -327,21 +333,6 @@ config AT91RESET_EXTRST
 
 config SYS_SOC
 	default "at91"
-
-config AT91_EFLASH
-	bool "Support AT91 flash driver"
-	depends on AT91SAM9XE
-	select USE_SYS_MAX_FLASH_BANKS
-	help
-	  Enable the driver for the embedded flash used in the Atmel
-	  AT91SAM9XE devices.
-
-config EFLASH_PROTSECTORS
-	int "Number of flash sectors to protect from erasing"
-	depends on AT91_EFLASH
-	help
-	  If non-zero, this will be the number of sectors of the flash to disallow
-	  U-Boot to ease, starting from the beginning of flash.
 
 config AT91_GPIO_PULLUP
 	bool "Keep pullups on peripheral pins"
@@ -362,7 +353,10 @@ source "board/atmel/at91sam9rlek/Kconfig"
 source "board/atmel/at91sam9x5ek/Kconfig"
 source "board/atmel/sam9x60ek/Kconfig"
 source "board/atmel/sam9x60_curiosity/Kconfig"
+source "board/atmel/sam9x75_curiosity/Kconfig"
 source "board/atmel/sama7g5ek/Kconfig"
+source "board/atmel/sama7g54_curiosity/Kconfig"
+source "board/atmel/sama7d65_curiosity/Kconfig"
 source "board/atmel/sama5d2_ptc_ek/Kconfig"
 source "board/atmel/sama5d2_xplained/Kconfig"
 source "board/atmel/sama5d27_som1_ek/Kconfig"
@@ -376,7 +370,6 @@ source "board/atmel/sama5d4ek/Kconfig"
 source "board/bluewater/gurnard/Kconfig"
 source "board/calao/usb_a9263/Kconfig"
 source "board/conclusive/kstr-sama5d27/Kconfig"
-source "board/egnite/ethernut5/Kconfig"
 source "board/esd/meesc/Kconfig"
 source "board/gardena/smart-gateway-at91sam/Kconfig"
 source "board/l+g/vinco/Kconfig"

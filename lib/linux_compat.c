@@ -1,5 +1,4 @@
 
-#include <common.h>
 #include <malloc.h>
 #include <memalign.h>
 #include <asm/cache.h>
@@ -33,6 +32,9 @@ struct kmem_cache *get_mem(int element_sz)
 	struct kmem_cache *ret;
 
 	ret = memalign(ARCH_DMA_MINALIGN, sizeof(struct kmem_cache));
+	if (!ret)
+		return NULL;
+
 	ret->sz = element_sz;
 
 	return ret;

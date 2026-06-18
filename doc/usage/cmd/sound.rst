@@ -1,6 +1,9 @@
 .. SPDX-License-Identifier: GPL-2.0+
 .. Copyright 2022, Heinrich Schuchardt <xypron.glpk@gmx.de>
 
+.. index::
+   single: sound (command)
+
 sound command
 =============
 
@@ -53,8 +56,3 @@ Configuration
 -------------
 
 The sound command is enabled by CONFIG_CMD_SOUND=y.
-
-Return value
-------------
-
-The return value $? is 0 (true) if the command succeeds, 1 (false) otherwise.

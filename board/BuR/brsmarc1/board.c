@@ -8,7 +8,6 @@
  * B&R Industrial Automation GmbH - http://www.br-automation.com
  *
  */
-#include <common.h>
 #include <errno.h>
 #include <init.h>
 #include <spl.h>
@@ -19,7 +18,6 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/mem.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
 #include <asm/emif.h>
@@ -31,9 +29,7 @@
 /* -- defines for used GPIO Hardware -- */
 #define PER_RESET		(2 * 32 + 0)
 
-DECLARE_GLOBAL_DATA_PTR;
-
-#if defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_XPL_BUILD)
 static const struct ddr_data ddr3_data = {
 	.datardsratio0 = MT41K256M16HA125E_RD_DQS,
 	.datawdsratio0 = MT41K256M16HA125E_WR_DQS,
@@ -73,7 +69,7 @@ static const struct ctrl_ioregs ddr3_ioregs = {
 #define OSC	(V_OSCK / 1000000)
 const struct dpll_params dpll_ddr3 = { 400, OSC - 1, 1, -1, -1, -1, -1};
 
-void am33xx_spl_board_init(void)
+void spl_board_init(void)
 {
 	struct cm_perpll *const cmper = (struct cm_perpll *)CM_PER;
 	struct cm_wkuppll *const cmwkup = (struct cm_wkuppll *)CM_WKUP;
@@ -125,8 +121,8 @@ void sdram_init(void)
 		   &ddr3_cmd_ctrl_data,
 		   &ddr3_emif_reg_data, 0);
 }
-#endif /* CONFIG_SPL_BUILD */
-#if !defined(CONFIG_SPL_BUILD)
+#endif /* CONFIG_XPL_BUILD */
+#if !defined(CONFIG_XPL_BUILD)
 
 /* decision if backlight is switched on or not on powerup */
 int board_backlightstate(void)
@@ -167,4 +163,4 @@ int board_late_init(void)
 }
 
 #endif /* CONFIG_BOARD_LATE_INIT */
-#endif /* !CONFIG_SPL_BUILD */
+#endif /* !CONFIG_XPL_BUILD */

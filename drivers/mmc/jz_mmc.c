@@ -6,10 +6,8 @@
  * Author: Paul Burton <paul.burton@imgtec.com>
  */
 
-#include <common.h>
 #include <malloc.h>
 #include <mmc.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/unaligned.h>
 #include <errno.h>
@@ -420,8 +418,6 @@ int jz_mmc_init(void __iomem *base)
 #else /* CONFIG_DM_MMC */
 
 #include <dm.h>
-DECLARE_GLOBAL_DATA_PTR;
-
 static int jz_mmc_dm_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 			      struct mmc_data *data)
 {

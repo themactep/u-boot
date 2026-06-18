@@ -9,7 +9,6 @@
 
 /* #define DEBUG */
 
-#include <common.h>
 #include <command.h>
 #include <env.h>
 #include <env_internal.h>
@@ -23,7 +22,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_XPL_BUILD
 # if defined(CONFIG_CMD_SAVEENV) && defined(CONFIG_CMD_FLASH)
 #  include <flash.h>
 #  define CMD_SAVEENV
@@ -36,11 +35,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #if (!defined(CONFIG_MICROBLAZE) && !defined(CONFIG_ARCH_ZYNQ) && \
 	!defined(CONFIG_TARGET_MCCMON6) && !defined(CONFIG_TARGET_X600) && \
 	!defined(CONFIG_TARGET_EDMINIV2)) || \
-	!defined(CONFIG_SPL_BUILD)
+	!defined(CONFIG_XPL_BUILD)
 #define LOADENV
 #endif
 
-#if !defined(CONFIG_TARGET_X600) || !defined(CONFIG_SPL_BUILD)
+#if !defined(CONFIG_TARGET_X600) || !defined(CONFIG_XPL_BUILD)
 #define INITENV
 #endif
 
@@ -108,6 +107,14 @@ static int env_flash_init(void)
 		gd->env_valid	= ENV_REDUND;
 	} else if (flag2 == 0xFF) {
 		gd->env_addr	= addr2;
+		gd->env_valid	= ENV_REDUND;
+	} else {
+		/*
+		 * Unrecognized flag pair (e.g. bit-flip on NOR flash).
+		 * Default to primary copy to prevent unintended pointer
+		 * swap in env_flash_load().
+		 */
+		gd->env_addr	= addr1;
 		gd->env_valid	= ENV_REDUND;
 	}
 

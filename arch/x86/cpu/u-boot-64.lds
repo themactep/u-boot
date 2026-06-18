@@ -11,10 +11,6 @@ ENTRY(_start)
 
 SECTIONS
 {
-#ifndef CONFIG_CMDLINE
-	/DISCARD/ : { *(__u_boot_list_2_cmd_*) }
-#endif
-
 #ifdef CONFIG_TEXT_BASE
 	. = CONFIG_TEXT_BASE;	/* Location of bootcode in flash */
 #endif
@@ -90,9 +86,11 @@ SECTIONS
 	__rel_dyn_end = .;
 	. = ALIGN(4);
 
-	.dynamic : { *(.dynamic) }
+	.dynamic : {
+		*(.dynamic)
+		. = ALIGN(8);
+	}
 
-	. = ALIGN(4);
 	_end = .;
 
 	.bss __rel_dyn_start (OVERLAY) : {

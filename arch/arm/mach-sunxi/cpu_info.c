@@ -5,7 +5,6 @@
  * Tom Cubie <tangliang@allwinnertech.com>
  */
 
-#include <common.h>
 #include <init.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
@@ -105,6 +104,10 @@ int print_cpuinfo(void)
 	puts("CPU:   Allwinner H6 (SUN50I)\n");
 #elif defined CONFIG_MACH_SUN50I_H616
 	puts("CPU:   Allwinner H616 (SUN50I)\n");
+#elif defined CONFIG_MACH_SUN50I_A133
+	puts("CPU:   Allwinner A133 (SUN50I)\n");
+#elif defined CONFIG_MACH_SUN55I_A523
+	puts("CPU:   Allwinner A523 (SUN55I)\n");
 #else
 #warning Please update cpu_info.c with correct CPU information
 	puts("CPU:   SUNXI Family\n");

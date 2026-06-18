@@ -4,7 +4,7 @@
  *		      Wenyou Yang <wenyou.yang@microchip.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <debug_uart.h>
 #include <dm.h>
 #include <i2c.h>
@@ -102,13 +102,6 @@ static void board_uart0_hw_init(void)
 void board_debug_uart_init(void)
 {
 	board_uart0_hw_init();
-}
-#endif
-
-#ifdef CONFIG_BOARD_EARLY_INIT_F
-int board_early_init_f(void)
-{
-	return 0;
 }
 #endif
 

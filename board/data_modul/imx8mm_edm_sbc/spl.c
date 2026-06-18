@@ -3,7 +3,6 @@
  * Copyright 2022 Marek Vasut <marex@denx.de>
  */
 
-#include <common.h>
 #include <hang.h>
 #include <image.h>
 #include <init.h>
@@ -27,8 +26,6 @@
 #include "lpddr4_timing.h"
 
 #include "../common/common.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 int data_modul_imx_edm_sbc_board_power_init(void)
 {
@@ -62,8 +59,10 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 	if (boot_dev_spl == MMC3_BOOT)
 		return BOOT_DEVICE_MMC2;	/* eMMC */
-	else
+	else if (boot_dev_spl == MMC2_BOOT)
 		return BOOT_DEVICE_MMC1;	/* SD */
+	else
+		return BOOT_DEVICE_BOARD;
 }
 
 void board_boot_order(u32 *spl_boot_list)
@@ -77,7 +76,7 @@ void board_boot_order(u32 *spl_boot_list)
 	else
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;	/* SD */
 
-	spl_boot_list[2] = BOOT_DEVICE_UART;	/* YModem */
+	spl_boot_list[2] = BOOT_DEVICE_BOARD;	/* SDP */
 	spl_boot_list[3] = BOOT_DEVICE_NONE;
 }
 

@@ -4,7 +4,7 @@
  * Copyright 2021 Purism
  */
 
-#include <common.h>
+#include <config.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <asm/io.h>
@@ -28,8 +28,6 @@
 #include <linux/delay.h>
 #include <linux/usb/gadget.h>
 #include "librem5.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 void spl_dram_init(void)
 {
@@ -418,12 +416,6 @@ out:
 	return rv;
 }
 
-int dm_usb_gadget_handle_interrupts(struct udevice *dev)
-{
-	dwc3_uboot_handle_interrupt(dev);
-	return 0;
-}
-
 static void dwc3_nxp_usb_phy_init(struct dwc3_device *dwc3)
 {
 	u32 RegData;
@@ -554,8 +546,6 @@ void board_init_f(ulong dummy)
 	gpio_request(WIFI_EN, "WIFI_EN");
 	gpio_direction_output(WIFI_EN, 1);
 #endif
-
-	board_early_init_f();
 
 	timer_init();
 

@@ -2,7 +2,6 @@
 /*
  * Copyright (c) Aspeed Technology Inc.
  */
-#include <common.h>
 #include <debug_uart.h>
 #include <dm.h>
 #include <spl.h>
@@ -10,9 +9,6 @@
 #include <linux/err.h>
 #include <asm/io.h>
 #include <asm/arch/scu_ast2600.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 void board_init_f(ulong dummy)
 {
@@ -46,10 +42,10 @@ u32 spl_boot_device(void)
 	}
 
 	/* boot from UART has higher priority */
-	if (scu->hwstrap2 & SCU_HWSTRAP2_BOOT_UART)
+	if (readl(&scu->hwstrap2) & SCU_HWSTRAP2_BOOT_UART)
 		return BOOT_DEVICE_UART;
 
-	if (scu->hwstrap1 & SCU_HWSTRAP1_BOOT_EMMC)
+	if (readl(&scu->hwstrap1) & SCU_HWSTRAP1_BOOT_EMMC)
 		return BOOT_DEVICE_MMC1;
 
 out:

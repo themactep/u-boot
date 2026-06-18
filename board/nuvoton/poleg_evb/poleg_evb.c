@@ -4,23 +4,18 @@
  * Copyright (c) 2021 Nuvoton Technology Corp.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <env.h>
+#include <event.h>
 #include <asm/io.h>
 #include <asm/arch/gcr.h>
 #include <asm/mach-types.h>
+#include "../common/uart.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int board_init(void)
-{
-	return 0;
-}
-
 int dram_init(void)
 {
-	char value[32];
 	struct npcm_gcr *gcr = (struct npcm_gcr *)NPCM_GCR_BA;
 
 	int ramsize = (readl(&gcr->intcr3) >> 8) & 0x7;
@@ -46,10 +41,35 @@ int dram_init(void)
 	break;
 	}
 
+	return 0;
+}
+
+static int last_stage_init(void)
+{
+
+	char value[32];
+	struct udevice *dev = gd->cur_serial_dev;
+
 	if (gd->ram_size > 0) {
-                sprintf(value, "%ldM", (gd->ram_size / 0x100000));
-                env_set("mem", value);
-        }
+		sprintf(value, "%ldM", (gd->ram_size / 0x100000));
+		env_set("mem", value);
+	}
+
+	if (dev && (dev->seq_ >= 0)) {
+		void *addr;
+		addr = dev_read_addr_ptr(dev);
+		if (addr) {
+			sprintf(value, "uart8250,mmio32,0x%x", (u32)addr);
+			env_set("earlycon", value);
+		}
+		sprintf(value, "ttyS%d,115200n8", dev->seq_);
+		env_set("console", value);
+#ifdef CONFIG_SYS_SKIP_UART_INIT
+		return board_set_console();
+#endif
+	}
 
 	return 0;
 }
+EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, last_stage_init);
+

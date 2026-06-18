@@ -47,7 +47,7 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 		autorepeat;
-		sw16 {
+		button-16 {
 			label = "sw16";
 			gpios = <&gpio 10 GPIO_ACTIVE_HIGH>;
 			linux,code = <BTN_MISC>;
@@ -65,19 +65,19 @@
 		};
 	};
 
-	si5332_0: si5332_0 { /* ps_ref_clk */
+	si5332_0: si5332-0 { /* ps_ref_clk */
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <33333333>;
 	};
 
-	si5332_1: si5332_1 { /* clk0_sgmii */
+	si5332_1: si5332-1 { /* clk0_sgmii */
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <33333333>; /* FIXME */
 	};
 
-	si5332_2: si5332_2 { /* clk1_usb */
+	si5332_2: si5332-2 { /* clk1_usb */
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <27000000>;
@@ -105,6 +105,9 @@
 	status = "okay";
 	non-removable;
 	disable-wp;
+	no-sd;
+	no-sdio;
+	cap-mmc-hw-reset;
 	bus-width = <8>;
 	xlnx,mio-bank = <0>;
 };
@@ -118,7 +121,6 @@
 	status = "okay";
 	phy-handle = <&phy0>;
 	phy-mode = "sgmii"; /* DTG generates this properly 1512 */
-	is-internal-pcspma;
 	/* phys = <&psgtr 0 PHY_TYPE_SGMII 0 0>; */
 	mdio: mdio {
 		#address-cells = <1>;
@@ -373,7 +375,6 @@
 				clock-frequency = <100000000>;
 				clock-output-names = "fmc_si570";
 			};
-
 		};
 		/* 7 unused */
 	};
@@ -536,7 +537,7 @@
 		};
 	};
 
-	pinctrl_i2c0_gpio: i2c0-gpio {
+	pinctrl_i2c0_gpio: i2c0-gpio-grp {
 		mux {
 			groups = "gpio0_34_grp", "gpio0_35_grp";
 			function = "gpio0";
@@ -563,7 +564,7 @@
 		};
 	};
 
-	pinctrl_i2c1_gpio: i2c1-gpio {
+	pinctrl_i2c1_gpio: i2c1-gpio-grp {
 		mux {
 			groups = "gpio0_36_grp", "gpio0_37_grp";
 			function = "gpio0";

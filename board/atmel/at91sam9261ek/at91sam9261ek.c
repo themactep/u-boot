@@ -5,7 +5,7 @@
  * Lead Tech Design <www.leadtechdesign.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <debug_uart.h>
 #include <init.h>
 #include <vsprintf.h>
@@ -136,13 +136,6 @@ static void at91sam9261ek_dm9000_hw_init(void)
 void board_debug_uart_init(void)
 {
 	at91_seriald_hw_init();
-}
-#endif
-
-#ifdef CONFIG_BOARD_EARLY_INIT_F
-int board_early_init_f(void)
-{
-	return 0;
 }
 #endif
 

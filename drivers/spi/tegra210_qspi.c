@@ -6,11 +6,9 @@
  *
  */
 
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <time.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch-tegra/clk_rst.h>
@@ -19,8 +17,6 @@
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include "tegra_spi.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* COMMAND1 */
 #define QSPI_CMD1_GO			BIT(31)

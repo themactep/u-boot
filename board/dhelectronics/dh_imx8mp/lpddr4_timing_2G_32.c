@@ -14,48 +14,62 @@ static struct dram_cfg_param ddr_ddrc_cfg[] = {
 	{ 0x3d400030, 0x1 },
 	{ 0x3d400000, 0xa1080020 },
 	{ 0x3d400020, 0x1323 },
-	{ 0x3d400024, 0x1c79100 },
-	{ 0x3d400064, 0x710106 },
+	{ 0x3d400024, 0x1b77400 },
+	{ 0x3d400064, 0x6d00fc },
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+	{ 0x3d400070, 0x7027fd4 },
+#else
 	{ 0x3d400070, 0x7027f90 },
+#endif
 	{ 0x3d400074, 0x790 },
-	{ 0x3d4000d0, 0xc0030720 },
-	{ 0x3d4000d4, 0xb80000 },
+	{ 0x3d4000d0, 0xc00306df },
+	{ 0x3d4000d4, 0xb10000 },
 	{ 0x3d4000dc, 0xe40036 },
-	{ 0x3d4000e0, 0x330000 },
+	{ 0x3d4000e0, 0xf30000 },
 	{ 0x3d4000e8, 0x660048 },
 	{ 0x3d4000ec, 0x160048 },
-	{ 0x3d400100, 0x1e262028 },
-	{ 0x3d400104, 0x7073b },
-	{ 0x3d40010c, 0xe0e000 },
-	{ 0x3d400110, 0x11040a11 },
+	{ 0x3d400100, 0x1d241e26 },
+	{ 0x3d400104, 0x70739 },
+	{ 0x3d40010c, 0xd0d000 },
+	{ 0x3d400110, 0x11040911 },
 	{ 0x3d400114, 0x2050e0e },
 	{ 0x3d400118, 0x1010008 },
 	{ 0x3d40011c, 0x502 },
 	{ 0x3d400130, 0x20700 },
 	{ 0x3d400134, 0xd100002 },
-	{ 0x3d400138, 0x10d },
-	{ 0x3d400144, 0xbb005e },
-	{ 0x3d400180, 0x3a5001c },
-	{ 0x3d400184, 0x2f071e5 },
+	{ 0x3d400138, 0x103 },
+	{ 0x3d400144, 0xb4005a },
+	{ 0x3d400180, 0x384001b },
+	{ 0x3d400184, 0x2d06ddd },
 	{ 0x3d400188, 0x0 },
-	{ 0x3d400190, 0x49b820c },
+	{ 0x3d400190, 0x49f820c },
 	{ 0x3d400194, 0x80303 },
-	{ 0x3d4001b4, 0x1b0c },
+	{ 0x3d4001b4, 0x1f0c },
 	{ 0x3d4001a0, 0xe0400018 },
 	{ 0x3d4001a4, 0xdf00e4 },
 	{ 0x3d4001a8, 0x80000000 },
 	{ 0x3d4001b0, 0x11 },
-	{ 0x3d4001c0, 0x1 },
+	{ 0x3d4001c0, 0x7 },
 	{ 0x3d4001c4, 0x1 },
 	{ 0x3d4000f4, 0x799 },
-	{ 0x3d400108, 0x810191a },
+	{ 0x3d400108, 0x8121b1a },
 	{ 0x3d400200, 0x1f },
 	{ 0x3d400208, 0x0 },
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+	{ 0x3d40020c, 0x13131300 },
+#else
 	{ 0x3d40020c, 0x0 },
+#endif
 	{ 0x3d400210, 0x1f1f },
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+	{ 0x3d400204, 0x50505 },
+	{ 0x3d400214, 0x4040404 },
+	{ 0x3d400218, 0x4040404 },
+#else
 	{ 0x3d400204, 0x80808 },
 	{ 0x3d400214, 0x7070707 },
 	{ 0x3d400218, 0x7070707 },
+#endif
 	{ 0x3d40021c, 0xf0f },
 	{ 0x3d400250, 0x1705 },
 	{ 0x3d400254, 0x2c },
@@ -74,7 +88,7 @@ static struct dram_cfg_param ddr_ddrc_cfg[] = {
 	{ 0x3d402050, 0x20d000 },
 	{ 0x3d402064, 0xc001c },
 	{ 0x3d4020dc, 0x840000 },
-	{ 0x3d4020e0, 0x330000 },
+	{ 0x3d4020e0, 0xf30000 },
 	{ 0x3d4020e8, 0x660048 },
 	{ 0x3d4020ec, 0x160048 },
 	{ 0x3d402100, 0xa040305 },
@@ -99,7 +113,7 @@ static struct dram_cfg_param ddr_ddrc_cfg[] = {
 	{ 0x3d403050, 0x20d000 },
 	{ 0x3d403064, 0x30007 },
 	{ 0x3d4030dc, 0x840000 },
-	{ 0x3d4030e0, 0x330000 },
+	{ 0x3d4030e0, 0xf30000 },
 	{ 0x3d4030e8, 0x660048 },
 	{ 0x3d4030ec, 0x160048 },
 	{ 0x3d403100, 0xa010102 },
@@ -269,7 +283,7 @@ static struct dram_cfg_param ddr_ddrphy_cfg[] = {
 	{ 0x20018, 0x3 },
 	{ 0x20075, 0x4 },
 	{ 0x20050, 0x0 },
-	{ 0x20008, 0x3a5 },
+	{ 0x20008, 0x384 },
 	{ 0x120008, 0x64 },
 	{ 0x220008, 0x19 },
 	{ 0x20088, 0x9 },
@@ -315,19 +329,15 @@ static struct dram_cfg_param ddr_ddrphy_cfg[] = {
 	{ 0x200f6, 0x0 },
 	{ 0x200f7, 0xf000 },
 	{ 0x20025, 0x0 },
-	{ 0x2002d, 0x0 },
-	{ 0x12002d, 0x0 },
-	{ 0x22002d, 0x0 },
+	{ 0x2002d, 0x1 },
+	{ 0x12002d, 0x1 },
+	{ 0x22002d, 0x1 },
 	{ 0x2007d, 0x212 },
 	{ 0x12007d, 0x212 },
 	{ 0x22007d, 0x212 },
 	{ 0x2007c, 0x61 },
 	{ 0x12007c, 0x61 },
 	{ 0x22007c, 0x61 },
-	{ 0x1004a, 0x500 },
-	{ 0x1104a, 0x500 },
-	{ 0x1204a, 0x500 },
-	{ 0x1304a, 0x500 },
 	{ 0x2002c, 0x0 },
 };
 
@@ -1057,7 +1067,7 @@ static struct dram_cfg_param ddr_ddrphy_trained_csr[] = {
 /* P0 message block paremeter for training firmware */
 static struct dram_cfg_param ddr_fsp0_cfg[] = {
 	{ 0xd0000, 0x0 },
-	{ 0x54003, 0xe94 },
+	{ 0x54003, 0xe10 },
 	{ 0x54004, 0x2 },
 	{ 0x54005, 0x2228 },
 	{ 0x54006, 0x14 },
@@ -1067,25 +1077,25 @@ static struct dram_cfg_param ddr_fsp0_cfg[] = {
 	{ 0x5400f, 0x100 },
 	{ 0x54012, 0x110 },
 	{ 0x54019, 0x36e4 },
-	{ 0x5401a, 0x33 },
+	{ 0x5401a, 0xf3 },
 	{ 0x5401b, 0x4866 },
 	{ 0x5401c, 0x4800 },
 	{ 0x5401e, 0x16 },
 	{ 0x5401f, 0x36e4 },
-	{ 0x54020, 0x33 },
+	{ 0x54020, 0xf3 },
 	{ 0x54021, 0x4866 },
 	{ 0x54022, 0x4800 },
 	{ 0x54024, 0x16 },
 	{ 0x5402b, 0x1000 },
 	{ 0x5402c, 0x1 },
 	{ 0x54032, 0xe400 },
-	{ 0x54033, 0x3336 },
+	{ 0x54033, 0xf336 },
 	{ 0x54034, 0x6600 },
 	{ 0x54035, 0x48 },
 	{ 0x54036, 0x48 },
 	{ 0x54037, 0x1600 },
 	{ 0x54038, 0xe400 },
-	{ 0x54039, 0x3336 },
+	{ 0x54039, 0xf336 },
 	{ 0x5403a, 0x6600 },
 	{ 0x5403b, 0x48 },
 	{ 0x5403c, 0x48 },
@@ -1107,25 +1117,25 @@ static struct dram_cfg_param ddr_fsp1_cfg[] = {
 	{ 0x5400f, 0x100 },
 	{ 0x54012, 0x110 },
 	{ 0x54019, 0x84 },
-	{ 0x5401a, 0x33 },
+	{ 0x5401a, 0xf3 },
 	{ 0x5401b, 0x4866 },
 	{ 0x5401c, 0x4800 },
 	{ 0x5401e, 0x16 },
 	{ 0x5401f, 0x84 },
-	{ 0x54020, 0x33 },
+	{ 0x54020, 0xf3 },
 	{ 0x54021, 0x4866 },
 	{ 0x54022, 0x4800 },
 	{ 0x54024, 0x16 },
 	{ 0x5402b, 0x1000 },
 	{ 0x5402c, 0x1 },
 	{ 0x54032, 0x8400 },
-	{ 0x54033, 0x3300 },
+	{ 0x54033, 0xf300 },
 	{ 0x54034, 0x6600 },
 	{ 0x54035, 0x48 },
 	{ 0x54036, 0x48 },
 	{ 0x54037, 0x1600 },
 	{ 0x54038, 0x8400 },
-	{ 0x54039, 0x3300 },
+	{ 0x54039, 0xf300 },
 	{ 0x5403a, 0x6600 },
 	{ 0x5403b, 0x48 },
 	{ 0x5403c, 0x48 },
@@ -1147,25 +1157,25 @@ static struct dram_cfg_param ddr_fsp2_cfg[] = {
 	{ 0x5400f, 0x100 },
 	{ 0x54012, 0x110 },
 	{ 0x54019, 0x84 },
-	{ 0x5401a, 0x33 },
+	{ 0x5401a, 0xf3 },
 	{ 0x5401b, 0x4866 },
 	{ 0x5401c, 0x4800 },
 	{ 0x5401e, 0x16 },
 	{ 0x5401f, 0x84 },
-	{ 0x54020, 0x33 },
+	{ 0x54020, 0xf3 },
 	{ 0x54021, 0x4866 },
 	{ 0x54022, 0x4800 },
 	{ 0x54024, 0x16 },
 	{ 0x5402b, 0x1000 },
 	{ 0x5402c, 0x1 },
 	{ 0x54032, 0x8400 },
-	{ 0x54033, 0x3300 },
+	{ 0x54033, 0xf300 },
 	{ 0x54034, 0x6600 },
 	{ 0x54035, 0x48 },
 	{ 0x54036, 0x48 },
 	{ 0x54037, 0x1600 },
 	{ 0x54038, 0x8400 },
-	{ 0x54039, 0x3300 },
+	{ 0x54039, 0xf300 },
 	{ 0x5403a, 0x6600 },
 	{ 0x5403b, 0x48 },
 	{ 0x5403c, 0x48 },
@@ -1176,7 +1186,7 @@ static struct dram_cfg_param ddr_fsp2_cfg[] = {
 /* P0 2D message block paremeter for training firmware */
 static struct dram_cfg_param ddr_fsp0_2d_cfg[] = {
 	{ 0xd0000, 0x0 },
-	{ 0x54003, 0xe94 },
+	{ 0x54003, 0xe10 },
 	{ 0x54004, 0x2 },
 	{ 0x54005, 0x2228 },
 	{ 0x54006, 0x14 },
@@ -1187,25 +1197,25 @@ static struct dram_cfg_param ddr_fsp0_2d_cfg[] = {
 	{ 0x54010, 0x1f7f },
 	{ 0x54012, 0x110 },
 	{ 0x54019, 0x36e4 },
-	{ 0x5401a, 0x33 },
+	{ 0x5401a, 0xf3 },
 	{ 0x5401b, 0x4866 },
 	{ 0x5401c, 0x4800 },
 	{ 0x5401e, 0x16 },
 	{ 0x5401f, 0x36e4 },
-	{ 0x54020, 0x33 },
+	{ 0x54020, 0xf3 },
 	{ 0x54021, 0x4866 },
 	{ 0x54022, 0x4800 },
 	{ 0x54024, 0x16 },
 	{ 0x5402b, 0x1000 },
 	{ 0x5402c, 0x1 },
 	{ 0x54032, 0xe400 },
-	{ 0x54033, 0x3336 },
+	{ 0x54033, 0xf336 },
 	{ 0x54034, 0x6600 },
 	{ 0x54035, 0x48 },
 	{ 0x54036, 0x48 },
 	{ 0x54037, 0x1600 },
 	{ 0x54038, 0xe400 },
-	{ 0x54039, 0x3336 },
+	{ 0x54039, 0xf336 },
 	{ 0x5403a, 0x6600 },
 	{ 0x5403b, 0x48 },
 	{ 0x5403c, 0x48 },
@@ -1695,9 +1705,9 @@ static struct dram_cfg_param ddr_phy_pie[] = {
 	{ 0x400d7, 0x20b },
 	{ 0x2003a, 0x2 },
 	{ 0x200be, 0x3 },
-	{ 0x2000b, 0x419 },
-	{ 0x2000c, 0xe9 },
-	{ 0x2000d, 0x91c },
+	{ 0x2000b, 0x3f4 },
+	{ 0x2000c, 0xe1 },
+	{ 0x2000d, 0x8ca },
 	{ 0x2000e, 0x2c },
 	{ 0x12000b, 0x70 },
 	{ 0x12000c, 0x19 },
@@ -1800,8 +1810,8 @@ static struct dram_cfg_param ddr_phy_pie[] = {
 
 static struct dram_fsp_msg ddr_dram_fsp_msg[] = {
 	{
-		/* P0 3733mts 1D */
-		.drate = 3733,
+		/* P0 3600mts 1D */
+		.drate = 3600,
 		.fw_type = FW_1D_IMAGE,
 		.fsp_cfg = ddr_fsp0_cfg,
 		.fsp_cfg_num = ARRAY_SIZE(ddr_fsp0_cfg),
@@ -1821,8 +1831,8 @@ static struct dram_fsp_msg ddr_dram_fsp_msg[] = {
 		.fsp_cfg_num = ARRAY_SIZE(ddr_fsp2_cfg),
 	},
 	{
-		/* P0 3733mts 2D */
-		.drate = 3733,
+		/* P0 3600mts 2D */
+		.drate = 3600,
 		.fw_type = FW_2D_IMAGE,
 		.fsp_cfg = ddr_fsp0_2d_cfg,
 		.fsp_cfg_num = ARRAY_SIZE(ddr_fsp0_2d_cfg),
@@ -1841,5 +1851,200 @@ struct dram_timing_info dh_imx8mp_dhcom_dram_timing_16g_x32 = {
 	.ddrphy_trained_csr_num = ARRAY_SIZE(ddr_ddrphy_trained_csr),
 	.ddrphy_pie = ddr_phy_pie,
 	.ddrphy_pie_num = ARRAY_SIZE(ddr_phy_pie),
-	.fsp_table = { 3733, 400, 100, },
+	.fsp_table = { 3600, 400, 100, },
+};
+
+/*
+ * Convert 2 GiB DRAM settings to 2 GiB DRAM settings.
+ * This does nothing and is only a placeholder to indicate
+ * that the 2 GiB DRAM settings are valid themselves.
+ */
+void dh_imx8mp_dhcom_dram_patch_16g_x32_to_16g_x32(void)
+{
+}
+
+/* Convert 2 GiB DRAM settings to 4 GiB 2-rank DRAM settings. */
+void dh_imx8mp_dhcom_dram_patch_16g_x32_to_32g_x32_2r(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ddr_ddrc_cfg); i++) {
+		if (ddr_ddrc_cfg[i].reg == 0x3d400000)
+			ddr_ddrc_cfg[i].val = 0xa3080020;
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+		if (ddr_ddrc_cfg[i].reg == 0x3d400200)
+			ddr_ddrc_cfg[i].val = 0x14;
+		if (ddr_ddrc_cfg[i].reg == 0x3d40020c)
+			ddr_ddrc_cfg[i].val = 0x14141400;
+#else
+		if (ddr_ddrc_cfg[i].reg == 0x3d400200)
+			ddr_ddrc_cfg[i].val = 0x17;
+#endif
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp0_cfg); i++) {
+		if (ddr_fsp0_cfg[i].reg == 0x54012)
+			ddr_fsp0_cfg[i].val = 0x310;
+		if (ddr_fsp0_cfg[i].reg == 0x5402c)
+			ddr_fsp0_cfg[i].val = 0x3;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp1_cfg); i++) {
+		if (ddr_fsp1_cfg[i].reg == 0x54012)
+			ddr_fsp1_cfg[i].val = 0x310;
+		if (ddr_fsp1_cfg[i].reg == 0x5402c)
+			ddr_fsp1_cfg[i].val = 0x3;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp2_cfg); i++) {
+		if (ddr_fsp2_cfg[i].reg == 0x54012)
+			ddr_fsp2_cfg[i].val = 0x310;
+		if (ddr_fsp2_cfg[i].reg == 0x5402c)
+			ddr_fsp2_cfg[i].val = 0x3;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp0_2d_cfg); i++) {
+		if (ddr_fsp0_2d_cfg[i].reg == 0x54012)
+			ddr_fsp0_2d_cfg[i].val = 0x310;
+		if (ddr_fsp0_2d_cfg[i].reg == 0x5402c)
+			ddr_fsp0_2d_cfg[i].val = 0x3;
+	}
+};
+
+/* Convert 2 GiB DRAM settings to 4 GiB 1-rank DRAM settings. */
+void dh_imx8mp_dhcom_dram_patch_16g_x32_to_32g_x32_1r(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ddr_ddrc_cfg); i++) {
+		if (ddr_ddrc_cfg[i].reg == 0x3d400064)
+			ddr_ddrc_cfg[i].val = 0x6d0156;
+		if (ddr_ddrc_cfg[i].reg == 0x3d400138)
+			ddr_ddrc_cfg[i].val = 0x15d;
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+		if (ddr_ddrc_cfg[i].reg == 0x3d400200)
+			ddr_ddrc_cfg[i].val = 0x1f;
+		if (ddr_ddrc_cfg[i].reg == 0x3d40020c)
+			ddr_ddrc_cfg[i].val = 0x14141400;
+#else
+		if (ddr_ddrc_cfg[i].reg == 0x3d400200)
+			ddr_ddrc_cfg[i].val = 0x17;
+#endif
+		if (ddr_ddrc_cfg[i].reg == 0x3d40021c)
+			ddr_ddrc_cfg[i].val = 0xf04;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402024)
+			ddr_ddrc_cfg[i].val = 0x61a800;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402064)
+			ddr_ddrc_cfg[i].val = 0x18004c;
+		if (ddr_ddrc_cfg[i].reg == 0x3d4020dc)
+			ddr_ddrc_cfg[i].val = 0x940009;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402100)
+			ddr_ddrc_cfg[i].val = 0xc080609;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402104)
+			ddr_ddrc_cfg[i].val = 0x3040d;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402108)
+			ddr_ddrc_cfg[i].val = 0x3060a0c;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402110)
+			ddr_ddrc_cfg[i].val = 0x4040204;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402114)
+			ddr_ddrc_cfg[i].val = 0x2030303;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402138)
+			ddr_ddrc_cfg[i].val = 0x4e;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402144)
+			ddr_ddrc_cfg[i].val = 0x280014;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402180)
+			ddr_ddrc_cfg[i].val = 0xc80006;
+		if (ddr_ddrc_cfg[i].reg == 0x3d402190)
+			ddr_ddrc_cfg[i].val = 0x3878202;
+		if (ddr_ddrc_cfg[i].reg == 0x3d4021b4)
+			ddr_ddrc_cfg[i].val = 0x702;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403024)
+			ddr_ddrc_cfg[i].val = 0x493fe1;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403064)
+			ddr_ddrc_cfg[i].val = 0x12003a;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403100)
+			ddr_ddrc_cfg[i].val = 0xa070507;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403104)
+			ddr_ddrc_cfg[i].val = 0x3040a;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403108)
+			ddr_ddrc_cfg[i].val = 0x203070b;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403110)
+			ddr_ddrc_cfg[i].val = 0x3040203;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403114)
+			ddr_ddrc_cfg[i].val = 0x2030303;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403138)
+			ddr_ddrc_cfg[i].val = 0x3b;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403144)
+			ddr_ddrc_cfg[i].val = 0x1f0010;
+		if (ddr_ddrc_cfg[i].reg == 0x3d403180)
+			ddr_ddrc_cfg[i].val = 0x970005;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_ddrphy_cfg); i++) {
+		if (ddr_ddrphy_cfg[i].reg == 0x12002e)
+			ddr_ddrphy_cfg[i].val = 0x1;
+		if (ddr_ddrphy_cfg[i].reg == 0x22002e)
+			ddr_ddrphy_cfg[i].val = 0x1;
+		if (ddr_ddrphy_cfg[i].reg == 0x120008)
+			ddr_ddrphy_cfg[i].val = 0xc8;
+		if (ddr_ddrphy_cfg[i].reg == 0x220008)
+			ddr_ddrphy_cfg[i].val = 0x96;
+		if (ddr_ddrphy_cfg[i].reg == 0x200f0)
+			ddr_ddrphy_cfg[i].val = 0x500;
+		if (ddr_ddrphy_cfg[i].reg == 0x200f4)
+			ddr_ddrphy_cfg[i].val = 0x5555;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp1_cfg); i++) {
+		if (ddr_fsp1_cfg[i].reg == 0x54002)
+			ddr_fsp1_cfg[i].val = 0x1;
+		if (ddr_fsp1_cfg[i].reg == 0x54003)
+			ddr_fsp1_cfg[i].val = 0x320;
+		if (ddr_fsp1_cfg[i].reg == 0x54019)
+			ddr_fsp1_cfg[i].val = 0x994;
+		if (ddr_fsp1_cfg[i].reg == 0x5401f)
+			ddr_fsp1_cfg[i].val = 0x994;
+		if (ddr_fsp1_cfg[i].reg == 0x54032)
+			ddr_fsp1_cfg[i].val = 0x9400;
+		if (ddr_fsp1_cfg[i].reg == 0x54033)
+			ddr_fsp1_cfg[i].val = 0xf309;
+		if (ddr_fsp1_cfg[i].reg == 0x54038)
+			ddr_fsp1_cfg[i].val = 0x9400;
+		if (ddr_fsp1_cfg[i].reg == 0x54039)
+			ddr_fsp1_cfg[i].val = 0xf309;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_fsp2_cfg); i++) {
+		if (ddr_fsp2_cfg[i].reg == 0x54002)
+			ddr_fsp2_cfg[i].val = 0x2;
+		if (ddr_fsp2_cfg[i].reg == 0x54003)
+			ddr_fsp2_cfg[i].val = 0x258;
+		if (ddr_fsp2_cfg[i].reg == 0x54019)
+			ddr_fsp2_cfg[i].val = 0x994;
+		if (ddr_fsp2_cfg[i].reg == 0x5401f)
+			ddr_fsp2_cfg[i].val = 0x994;
+		if (ddr_fsp2_cfg[i].reg == 0x54032)
+			ddr_fsp2_cfg[i].val = 0x9400;
+		if (ddr_fsp2_cfg[i].reg == 0x54033)
+			ddr_fsp2_cfg[i].val = 0xf309;
+		if (ddr_fsp2_cfg[i].reg == 0x54038)
+			ddr_fsp2_cfg[i].val = 0x9400;
+		if (ddr_fsp2_cfg[i].reg == 0x54039)
+			ddr_fsp2_cfg[i].val = 0xf309;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ddr_phy_pie); i++) {
+		if (ddr_phy_pie[i].reg == 0x12000b)
+			ddr_phy_pie[i].val = 0xe1;
+		if (ddr_phy_pie[i].reg == 0x12000c)
+			ddr_phy_pie[i].val = 0x32;
+		if (ddr_phy_pie[i].reg == 0x12000d)
+			ddr_phy_pie[i].val = 0x1f4;
+		if (ddr_phy_pie[i].reg == 0x22000b)
+			ddr_phy_pie[i].val = 0xa8;
+		if (ddr_phy_pie[i].reg == 0x22000c)
+			ddr_phy_pie[i].val = 0x25;
+		if (ddr_phy_pie[i].reg == 0x22000d)
+			ddr_phy_pie[i].val = 0x177;
+	}
 };

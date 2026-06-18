@@ -5,15 +5,11 @@
 
 #define LOG_CATEGORY LOGC_EFI
 
-#include <common.h>
 #include <dm.h>
 #include <efi_loader.h>
 #include <efi_rng.h>
 #include <log.h>
 #include <rng.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 const efi_guid_t efi_guid_rng_protocol = EFI_RNG_PROTOCOL_GUID;
 
@@ -92,7 +88,7 @@ back:
 }
 
 /**
- * rng_getrng() - get random value
+ * getrng() - get random value
  *
  * This function implement the GetRng() service of the EFI random number
  * generator protocol. See the UEFI spec for details.

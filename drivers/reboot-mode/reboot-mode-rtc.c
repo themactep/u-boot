@@ -3,14 +3,11 @@
  * Copyright (c), Vaisala Oyj
  */
 
-#include <common.h>
 #include <dm.h>
 #include <dm/device_compat.h>
 #include <reboot-mode/reboot-mode-rtc.h>
 #include <reboot-mode/reboot-mode.h>
 #include <rtc.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static int reboot_mode_get(struct udevice *dev, u32 *buf)
 {

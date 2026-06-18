@@ -12,8 +12,6 @@
  * Andreas Larsson <andreas@gaisler.com>
  */
 
-#include <common.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <clk.h>
 #include <dm.h>
@@ -75,8 +73,6 @@ struct ocores_i2c_bus {
 	void (*setreg)(struct ocores_i2c_bus *i2c, int reg, u8 value);
 	u8 (*getreg)(struct ocores_i2c_bus *i2c, int reg);
 };
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* Boolean attribute values */
 enum {
@@ -395,8 +391,6 @@ static int ocores_i2c_enable_clk(struct udevice *dev)
 		return -EINVAL;
 
 	bus->ip_clk_khz = clk_rate / 1000;
-
-	clk_free(&bus->clk);
 
 	return 0;
 }

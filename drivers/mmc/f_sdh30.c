@@ -5,7 +5,6 @@
  * Copyright 2021 Socionext, Inc.
  */
 
-#include <common.h>
 #include <clk.h>
 #include <dm.h>
 #include <malloc.h>
@@ -29,8 +28,6 @@ struct f_sdh30_plat {
 	bool enable_cmd_dat_delay;
 	const struct f_sdh30_data *data;
 };
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static void f_sdh30_e51_init(struct udevice *dev)
 {

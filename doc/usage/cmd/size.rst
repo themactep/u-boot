@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+
 
+.. index::
+   single: size (command)
+
 size command
 ============
 
@@ -32,9 +35,3 @@ Configuration
 -------------
 
 The size command is only available if CONFIG_CMD_FS_GENERIC=y.
-
-Return value
-------------
-
-The return value $? is set to 0 (true) if the command succeded and to 1 (false)
-otherwise.

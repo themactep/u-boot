@@ -18,7 +18,6 @@
  */
 
 #include <config.h>
-#include <common.h>
 #include <log.h>
 #include <watchdog.h>
 
@@ -34,8 +33,8 @@
 #include <linux/string.h>
 #include <malloc.h>
 
-static void *SzAlloc(void *p, size_t size) { return malloc(size); }
-static void SzFree(void *p, void *address) { free(address); }
+static void *SzAlloc(ISzAllocPtr p, size_t size) { return malloc(size); }
+static void SzFree(ISzAllocPtr p, void *address) { free(address); }
 
 int lzmaBuffToBuffDecompress(unsigned char *outStream, SizeT *uncompressedSize,
 			     const unsigned char *inStream, SizeT length)

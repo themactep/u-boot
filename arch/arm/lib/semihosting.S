@@ -13,16 +13,22 @@ ENTRY(smh_trap)
 
 #if defined(CONFIG_ARM64)
 	hlt	#0xf000
-#elif defined(CONFIG_CPU_V7M)
+#elif defined(CONFIG_CPU_V7M_V8M)
 	bkpt	#0xab
 #elif defined(CONFIG_SYS_THUMB_BUILD)
 	svc	#0xab
 #else
+#if CONFIG_SYS_ARM_ARCH < 7
+	/* Before the ARMv7 exception model, svc (swi) clobbers lr */
+	mov	r2, lr
+#endif
 	svc	#0x123456
 #endif
 
 #if defined(CONFIG_ARM64)
 	ret
+#elif CONFIG_SYS_ARM_ARCH < 7
+	bx	r2
 #else
 	bx	lr
 #endif

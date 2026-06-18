@@ -8,7 +8,6 @@
 #ifndef _EFI_SELFTEST_H
 #define _EFI_SELFTEST_H
 
-#include <common.h>
 #include <efi.h>
 #include <efi_api.h>
 #include <efi_loader.h>
@@ -20,6 +19,7 @@
 
 extern const struct efi_system_table *st_systable;
 extern const struct efi_boot_services *st_boottime;
+extern const struct efi_runtime_services *st_runtime;
 
 /**
  * efi_st_printf() - print a message
@@ -147,6 +147,15 @@ void *efi_st_get_config_table(const efi_guid_t *guid);
  * Return:	Unicode character
  */
 u16 efi_st_get_key(void);
+
+/**
+ * efi_st_query_variable_common - Common variable tests for boottime/runtime
+ *
+ * @attributes: Attributes used
+ *
+ * Return:	EFI_ST_SUCCESS/FAILURE
+ */
+int efi_st_query_variable_common(u32 attributes);
 
 /**
  * struct efi_unit_test - EFI unit test

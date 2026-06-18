@@ -3,13 +3,12 @@
  * Copyright (C) 2012 Samsung Electronics
  */
 
-#include <common.h>
+#include <config.h>
 #include <dm.h>
 #include <dwc3-uboot.h>
 #include <env.h>
 #include <fdtdec.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <i2c.h>
@@ -35,8 +34,6 @@
 #include <samsung/exynos5-dt-types.h>
 #include <samsung/misc.h>
 #include <tmu.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static int exynos_set_regulator(const char *name, uint uv)
 {
@@ -88,10 +85,6 @@ int exynos_power_init(void)
 	if (ret == -ENODEV)
 		return 0;
 
-	ret = regulators_enable_boot_on(false);
-	if (ret)
-		return ret;
-
 	ret = exynos_set_regulator("vdd_mif", 1100000);
 	if (ret)
 		return ret;
@@ -121,12 +114,6 @@ static struct dwc3_device dwc3_device_data = {
 	.dr_mode = USB_DR_MODE_PERIPHERAL,
 	.index = 0,
 };
-
-int dm_usb_gadget_handle_interrupts(struct udevice *dev)
-{
-	dwc3_uboot_handle_interrupt(dev);
-	return 0;
-}
 
 int board_usb_init(int index, enum usb_init_type init)
 {

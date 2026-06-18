@@ -5,7 +5,6 @@
  * Copyright (C) 2011 The Chromium OS Authors. All rights reserved.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <errno.h>
 #include <log.h>
@@ -167,7 +166,7 @@ static const struct udevice_id ivybridge_syscon_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(syscon_intel_me) = {
+U_BOOT_DRIVER(syscon_intel_me_ivybridge) = {
 	.name = "intel_me_syscon",
 	.id = UCLASS_SYSCON,
 	.of_match = ivybridge_syscon_ids,

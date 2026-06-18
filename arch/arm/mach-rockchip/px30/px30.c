@@ -2,14 +2,16 @@
 /*
  * Copyright (c) 2017 Rockchip Electronics Co., Ltd
  */
-#include <common.h>
+
+#define LOG_CATEGORY LOGC_ARCH
+
 #include <clk.h>
 #include <dm.h>
 #include <fdt_support.h>
 #include <init.h>
+#include <misc.h>
 #include <spl.h>
 #include <asm/armv8/mmu.h>
-#include <asm/io.h>
 #include <asm/arch-rockchip/bootrom.h>
 #include <asm/arch-rockchip/grf_px30.h>
 #include <asm/arch-rockchip/hardware.h>
@@ -17,9 +19,11 @@
 #include <asm/arch-rockchip/clock.h>
 #include <asm/arch-rockchip/cru_px30.h>
 #include <dt-bindings/clock/px30-cru.h>
+#include <linux/bitfield.h>
 
 const char * const boot_devices[BROM_LAST_BOOTSOURCE + 1] = {
 	[BROM_BOOTSOURCE_EMMC] = "/mmc@ff390000",
+	[BROM_BOOTSOURCE_SPINOR] = "/spi@ff3a0000/flash@0",
 	[BROM_BOOTSOURCE_SD] = "/mmc@ff370000",
 };
 
@@ -245,7 +249,7 @@ int arch_cpu_init(void)
 	static struct px30_cru * const cru = (void *)CRU_BASE;
 	u32 __maybe_unused val;
 
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_XPL_BUILD
 	/* We do some SoC one time setting here. */
 	/* Disable the ddr secure region setting to make it non-secure */
 	writel(0x0, DDR_FW_BASE + FW_DDR_CON);
@@ -444,51 +448,58 @@ void board_debug_uart_init(void)
 }
 #endif /* CONFIG_DEBUG_UART_BOARD_INIT */
 
-#if defined(CONFIG_SPL_BUILD) && !defined(CONFIG_TPL_BUILD)
-const char *spl_decode_boot_device(u32 boot_device)
+#define PX30_OTP_SPECIFICATION_OFFSET		0x06
+
+#define DDR_GRF_BASE_ADDR               0xff630000
+#define DDR_GRF_CON(n)                  (0 + (n) * 4)
+
+int checkboard(void)
 {
-	int i;
-	static const struct {
-		u32 boot_device;
-		const char *ofpath;
-	} spl_boot_devices_tbl[] = {
-		{ BOOT_DEVICE_MMC2, "/mmc@ff370000" },
-		{ BOOT_DEVICE_MMC1, "/mmc@ff390000" },
-	};
+	struct udevice *dev;
+	u8 specification;
+	u32 base_soc;
+	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(spl_boot_devices_tbl); ++i)
-		if (spl_boot_devices_tbl[i].boot_device == boot_device)
-			return spl_boot_devices_tbl[i].ofpath;
+	if (!IS_ENABLED(CONFIG_ROCKCHIP_OTP) || !CONFIG_IS_ENABLED(MISC))
+		return 0;
 
-	return NULL;
-}
-
-void spl_perform_fixups(struct spl_image_info *spl_image)
-{
-	void *blob = spl_image->fdt_addr;
-	const char *boot_ofpath;
-	int chosen;
-
-	/*
-	 * Inject the ofpath of the device the full U-Boot (or Linux in
-	 * Falcon-mode) was booted from into the FDT, if a FDT has been
-	 * loaded at the same time.
-	 */
-	if (!blob)
-		return;
-
-	boot_ofpath = spl_decode_boot_device(spl_image->boot_device);
-	if (!boot_ofpath) {
-		pr_err("%s: could not map boot_device to ofpath\n", __func__);
-		return;
+	ret = uclass_get_device_by_driver(UCLASS_MISC,
+					  DM_DRIVER_GET(rockchip_otp), &dev);
+	if (ret) {
+		log_debug("Could not find otp device, ret=%d\n", ret);
+		return 0;
 	}
 
-	chosen = fdt_find_or_add_subnode(blob, 0, "chosen");
-	if (chosen < 0) {
-		pr_err("%s: could not find/create '/chosen'\n", __func__);
-		return;
+	/* base SoC: 0x26334b52 for RK3326; 0x30335850 for PX30 */
+	ret = misc_read(dev, 0, &base_soc, 4);
+	if (ret < 0) {
+		log_debug("Could not read specification, ret=%d\n", ret);
+		return 0;
 	}
-	fdt_setprop_string(blob, chosen,
-			   "u-boot,spl-boot-device", boot_ofpath);
+
+	if (base_soc != 0x26334b52 && base_soc != 0x30335850) {
+		log_debug("Could not identify SoC, got 0x%04x in OTP\n", base_soc);
+		return 0;
+	}
+
+	/* SoC variant: 0x21 for PX30/PX30S/RK3326/RK3326S; 0x2b for PX30K */
+	ret = misc_read(dev, PX30_OTP_SPECIFICATION_OFFSET, &specification, 1);
+	if (ret < 0) {
+		log_debug("Could not read specification, ret=%d\n", ret);
+		return 0;
+	}
+
+	if (specification == 0x2b) {
+		printf("SoC:   PX30K\n");
+		return 0;
+	}
+
+	/* From vendor kernel: drivers/soc/rockchip/rockchip-cpuinfo.c */
+	specification = FIELD_GET(GENMASK(15, 14),
+				  readl(DDR_GRF_BASE_ADDR + DDR_GRF_CON(1)));
+	log_debug("DDR specification is %d\n", specification);
+	printf("SoC:   %s%s\n", base_soc == 0x26334b52 ? "RK3326" : "PX30",
+	       specification == 0x3 ? "S" : "");
+
+	return 0;
 }
-#endif

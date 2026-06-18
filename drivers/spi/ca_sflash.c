@@ -7,10 +7,10 @@
  * Author: PengPeng Chen <pengpeng.chen@cortina-access.com>
  */
 
-#include <common.h>
 #include <malloc.h>
 #include <clk.h>
 #include <dm.h>
+#include <dm/device_compat.h>
 #include <errno.h>
 #include <fdtdec.h>
 #include <linux/compat.h>
@@ -21,9 +21,6 @@
 #include <spi.h>
 #include <spi-mem.h>
 #include <reset.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct ca_sflash_regs {
 	u32 idr;		/* 0x00:Flash word ID Register */

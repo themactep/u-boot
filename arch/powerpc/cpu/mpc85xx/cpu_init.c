@@ -9,7 +9,6 @@
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  */
 
-#include <common.h>
 #include <display_options.h>
 #include <env.h>
 #include <init.h>
@@ -42,9 +41,11 @@
 #ifdef CONFIG_FSL_CAAM
 #include <fsl_sec.h>
 #endif
-#if defined(CONFIG_NXP_ESBC) && defined(CONFIG_FSL_CORENET)
+#if defined(CONFIG_FSL_CORENET)
 #include <asm/fsl_pamu.h>
+#if defined(CONFIG_NXP_ESBC)
 #include <fsl_secboot_err.h>
+#endif
 #endif
 #ifdef CONFIG_SYS_QE_FMAN_FW_IN_NAND
 #include <nand.h>
@@ -128,7 +129,6 @@ void fsl_erratum_a006261_workaround(struct ccsr_usb_phy __iomem *usb_phy)
 #endif
 }
 #endif
-
 
 #if defined(CONFIG_QE) && !defined(CONFIG_U_QE)
 extern qe_iop_conf_t qe_iop_conf_tab[];
@@ -901,6 +901,8 @@ int cpu_init_r(void)
 #if defined(CONFIG_NXP_ESBC) && defined(CONFIG_FSL_CORENET)
 	if (pamu_init() < 0)
 		fsl_secboot_handle_error(ERROR_ESBC_PAMU_INIT);
+#elif defined(CONFIG_FSL_CORENET)
+	pamu_init();
 #endif
 
 #ifdef CONFIG_FSL_CAAM
@@ -941,22 +943,6 @@ int cpu_init_r(void)
 
 	return 0;
 }
-
-#ifdef CONFIG_ARCH_MISC_INIT
-int arch_misc_init(void)
-{
-	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
-		struct udevice *dev;
-		int ret;
-
-		ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(caam_jr), &dev);
-		if (ret)
-			printf("Failed to initialize caam_jr: %d\n", ret);
-	}
-
-	return 0;
-}
-#endif
 
 void arch_preboot_os(void)
 {

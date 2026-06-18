@@ -5,7 +5,6 @@
 
 /* Tegra SoC common clock control functions */
 
-#include <common.h>
 #include <div64.h>
 #include <dm.h>
 #include <errno.h>
@@ -128,14 +127,14 @@ unsigned long clock_start_pll(enum clock_id clkid, u32 divm, u32 divn,
 	struct clk_pll_simple *simple_pll = NULL;
 	u32 misc_data, data;
 
-	if (clkid < (enum clock_id)TEGRA_CLK_PLLS) {
+	if (clkid < (enum clock_id)TEGRA_CLK_PLLS)
 		pll = get_pll(clkid);
-	} else {
+	else
 		simple_pll = clock_get_simple_pll(clkid);
-		if (!simple_pll) {
-			debug("%s: Uknown simple PLL %d\n", __func__, clkid);
-			return 0;
-		}
+
+	if (!simple_pll && !pll) {
+		log_err("Unknown PLL id %d\n", clkid);
+		return 0;
 	}
 
 	/*
@@ -359,6 +358,13 @@ unsigned long clock_get_periph_rate(enum periph_id periph_id,
 		break;
 	}
 
+	/*
+	 * PLLD/PLLD2 raw clock rate is never used, instead plld_out0 is used
+	 * that is PLLD/PLLD2 halved.
+	 */
+	if (parent == CLOCK_ID_DISPLAY || parent == CLOCK_ID_DISPLAY2)
+		parent_rate /= 2;
+
 	return get_rate_from_divider(parent_rate, div);
 }
 
@@ -450,6 +456,7 @@ unsigned clock_adjust_periph_pll_div(enum periph_id periph_id,
 		enum clock_id parent, unsigned rate, int *extra_div)
 {
 	unsigned effective_rate;
+	unsigned int parent_rate;
 	int mux_bits, divider_bits, source;
 	int divider;
 	int xdiv = 0;
@@ -458,7 +465,17 @@ unsigned clock_adjust_periph_pll_div(enum periph_id periph_id,
 	source = get_periph_clock_source(periph_id, parent, &mux_bits,
 					 &divider_bits);
 
-	divider = find_best_divider(divider_bits, pll_rate[parent],
+	/*
+	 * Clocks derived from PLLD/D2 are actually sourced from its halved
+	 * output, plld_out0/plld2_out0. No peripheral clocks use the raw
+	 * PLLD/D2 frequency. This halving must be accounted for in derived
+	 * clock calculations.
+	 */
+	parent_rate = pll_rate[parent];
+	if (parent == CLOCK_ID_DISPLAY || parent == CLOCK_ID_DISPLAY2)
+		parent_rate /= 2;
+
+	divider = find_best_divider(divider_bits, parent_rate,
 				    rate, &xdiv);
 	if (extra_div)
 		*extra_div = xdiv;
@@ -542,7 +559,8 @@ unsigned int __weak clk_m_get_rate(unsigned int parent_rate)
 
 unsigned clock_get_rate(enum clock_id clkid)
 {
-	struct clk_pll *pll;
+	struct clk_pll *pll = NULL;
+	struct clk_pll_simple *simple_pll = NULL;
 	u32 base, divm;
 	u64 parent_rate, rate;
 	struct clk_pll_info *pllinfo = &tegra_pll_info_table[clkid];
@@ -554,10 +572,20 @@ unsigned clock_get_rate(enum clock_id clkid)
 	if (clkid == CLOCK_ID_CLK_M)
 		return clk_m_get_rate(parent_rate);
 
-	pll = get_pll(clkid);
-	if (!pll)
+	if (clkid < (enum clock_id)TEGRA_CLK_PLLS)
+		pll = get_pll(clkid);
+	else
+		simple_pll = clock_get_simple_pll(clkid);
+
+	if (!simple_pll && !pll) {
+		log_err("Unknown PLL id %d\n", clkid);
 		return 0;
-	base = readl(&pll->pll_base);
+	}
+
+	if (pll)
+		base = readl(&pll->pll_base);
+	else
+		base = readl(&simple_pll->pll_base);
 
 	rate = parent_rate * ((base >> pllinfo->n_shift) & pllinfo->n_mask);
 	divm = (base >> pllinfo->m_shift) & pllinfo->m_mask;
@@ -599,12 +627,24 @@ unsigned clock_get_rate(enum clock_id clkid)
 int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 {
 	u32 base_reg, misc_reg;
-	struct clk_pll *pll;
+	struct clk_pll *pll = NULL;
+	struct clk_pll_simple *simple_pll = NULL;
 	struct clk_pll_info *pllinfo = &tegra_pll_info_table[clkid];
 
-	pll = get_pll(clkid);
+	if (clkid < (enum clock_id)TEGRA_CLK_PLLS)
+		pll = get_pll(clkid);
+	else
+		simple_pll = clock_get_simple_pll(clkid);
 
-	base_reg = readl(&pll->pll_base);
+	if (!simple_pll && !pll) {
+		log_err("Unknown PLL id %d\n", clkid);
+		return 0;
+	}
+
+	if (pll)
+		base_reg = readl(&pll->pll_base);
+	else
+		base_reg = readl(&simple_pll->pll_base);
 
 	/* Set BYPASS, m, n and p to PLL_BASE */
 	base_reg &= ~(pllinfo->m_mask << pllinfo->m_shift);
@@ -631,21 +671,53 @@ int clock_set_rate(enum clock_id clkid, u32 n, u32 m, u32 p, u32 cpcon)
 	}
 
 	base_reg |= PLL_BYPASS_MASK;
-	writel(base_reg, &pll->pll_base);
+	if (pll)
+		writel(base_reg, &pll->pll_base);
+	else
+		writel(base_reg, &simple_pll->pll_base);
 
 	/* Set cpcon (KCP) to PLL_MISC */
-	misc_reg = readl(&pll->pll_misc);
+	if (pll)
+		misc_reg = readl(&pll->pll_misc);
+	else
+		misc_reg = readl(&simple_pll->pll_misc);
+
 	misc_reg &= ~(pllinfo->kcp_mask << pllinfo->kcp_shift);
 	misc_reg |= cpcon << pllinfo->kcp_shift;
-	writel(misc_reg, &pll->pll_misc);
+	if (pll)
+		writel(misc_reg, &pll->pll_misc);
+	else
+		writel(misc_reg, &simple_pll->pll_misc);
 
 	/* Enable PLL */
 	base_reg |= PLL_ENABLE_MASK;
-	writel(base_reg, &pll->pll_base);
+	if (pll)
+		writel(base_reg, &pll->pll_base);
+	else
+		writel(base_reg, &simple_pll->pll_base);
 
 	/* Disable BYPASS */
 	base_reg &= ~PLL_BYPASS_MASK;
-	writel(base_reg, &pll->pll_base);
+	if (pll)
+		writel(base_reg, &pll->pll_base);
+	else
+		writel(base_reg, &simple_pll->pll_base);
+
+	/* PLLD and PLLD2 are only clocks which have ENABLE bit */
+	if (clkid == CLOCK_ID_DISPLAY)
+		setbits_le32(&pll->pll_misc, BIT(PLLD_CLKENABLE));
+	if (clkid == CLOCK_ID_DISPLAY2)
+		setbits_le32(&simple_pll->pll_misc, BIT(PLLD_CLKENABLE));
+
+	/*
+	 * Changing clocks was never intended in the U-Boot for Tegra.
+	 * If a clock is changed after clock_init() the parent rate is wrong.
+	 * Usually there is no reason to change peripheral clocks, but Display
+	 * PLLs which needs to generate a precise pixelclock might be adjusted.
+	 * Especially in the case of HDMI display with changing and prior
+	 * unknown resolution.
+	 */
+	pll_rate[clkid] = clock_get_rate(clkid);
 
 	return 0;
 }
@@ -729,6 +801,9 @@ void clock_init(void)
 	pll_rate[CLOCK_ID_SFROM32KHZ] = 32768;
 	pll_rate[CLOCK_ID_OSC] = clock_get_rate(CLOCK_ID_OSC);
 	pll_rate[CLOCK_ID_CLK_M] = clock_get_rate(CLOCK_ID_CLK_M);
+#ifndef CONFIG_TEGRA20
+	pll_rate[CLOCK_ID_DISPLAY2] = clock_get_rate(CLOCK_ID_DISPLAY2);
+#endif
 
 	debug("Osc = %d\n", pll_rate[CLOCK_ID_OSC]);
 	debug("CLKM = %d\n", pll_rate[CLOCK_ID_CLK_M]);

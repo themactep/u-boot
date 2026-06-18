@@ -8,7 +8,6 @@
 
 #define LOG_CATEGORY UCLASS_BOOTSTD
 
-#include <common.h>
 #include <bootdev.h>
 #include <bootflow.h>
 #include <bootmeth.h>
@@ -16,6 +15,7 @@
 #include <dm.h>
 #include <efi_loader.h>
 #include <efi_variable.h>
+#include <malloc.h>
 
 /**
  * struct efi_mgr_priv - private info for the efi-mgr driver
@@ -58,13 +58,14 @@ static int efi_mgr_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 	}
 
 	ret = efi_init_obj_list();
-	if (ret)
-		return log_msg_ret("init", ret);
+	if (ret != EFI_SUCCESS)
+		return ret;
 
 	/* Enable this method if the "BootOrder" UEFI exists. */
 	bootorder = efi_get_var(u"BootOrder", &efi_global_variable_guid,
 				&size);
 	if (bootorder) {
+		free(bootorder);
 		bflow->state = BOOTFLOWST_READY;
 		return 0;
 	}
@@ -73,7 +74,8 @@ static int efi_mgr_read_bootflow(struct udevice *dev, struct bootflow *bflow)
 }
 
 static int efi_mgr_read_file(struct udevice *dev, struct bootflow *bflow,
-				const char *file_path, ulong addr, ulong *sizep)
+			     const char *file_path, ulong addr,
+			     enum bootflow_img_t type, ulong *sizep)
 {
 	/* Files are loaded by the 'bootefi bootmgr' command */
 
@@ -85,7 +87,7 @@ static int efi_mgr_boot(struct udevice *dev, struct bootflow *bflow)
 	int ret;
 
 	/* Booting is handled by the 'bootefi bootmgr' command */
-	ret = run_command("bootefi bootmgr", 0);
+	ret = efi_bootmgr_run(EFI_FDT_USE_INTERNAL);
 
 	return 0;
 }
@@ -96,6 +98,15 @@ static int bootmeth_efi_mgr_bind(struct udevice *dev)
 
 	plat->desc = "EFI bootmgr flow";
 	plat->flags = BOOTMETHF_GLOBAL;
+
+	/*
+	 * bootmgr scans all available devices which can take a while,
+	 * especially for network devices. So choose the priority so that it
+	 * comes just before the 'very slow' devices. This allows systems which
+	 * don't rely on bootmgr to boot quickly, while allowing bootmgr to run
+	 * on systems which need it.
+	 */
+	plat->glob_prio = BOOTDEVP_6_NET_BASE;
 
 	return 0;
 }
@@ -112,7 +123,7 @@ static const struct udevice_id efi_mgr_bootmeth_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(bootmeth_efi_mgr) = {
+U_BOOT_DRIVER(bootmeth_3efi_mgr) = {
 	.name		= "bootmeth_efi_mgr",
 	.id		= UCLASS_BOOTMETH,
 	.of_match	= efi_mgr_bootmeth_ids,

@@ -3,7 +3,6 @@
  * Copyright (C) 2021 Mark Kettenis <kettenis@openbsd.org>
  */
 
-#include <common.h>
 #include <asm/io.h>
 #include <dm.h>
 #include <dm/device-internal.h>
@@ -111,6 +110,7 @@ static int apple_pmgr_of_xlate(struct power_domain *power_domain,
 }
 
 static const struct udevice_id apple_pmgr_ids[] = {
+	{ .compatible = "apple,t8103-pmgr-pwrstate" },
 	{ .compatible = "apple,pmgr-pwrstate" },
 	{ /* sentinel */ }
 };

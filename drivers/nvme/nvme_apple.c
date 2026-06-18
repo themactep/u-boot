@@ -3,7 +3,6 @@
  * (C) Copyright 2021 Mark Kettenis <kettenis@openbsd.org>
  */
 
-#include <common.h>
 #include <dm.h>
 #include <mailbox.h>
 #include <mapmem.h>
@@ -14,6 +13,7 @@
 #include <asm/arch/rtkit.h>
 #include <asm/arch/sart.h>
 #include <linux/iopoll.h>
+#include <linux/sizes.h>
 
 /* ASC registers */
 #define REG_CPU_CTRL		0x0044
@@ -88,6 +88,9 @@ static int apple_nvme_setup_queue(struct nvme_queue *nvmeq)
 	}
 
 	priv->tcbs[nvmeq->qid] = (void *)memalign(4096, ANS_NVMMU_TCB_SIZE);
+	if (!priv->tcbs[nvmeq->qid])
+		return -ENOMEM;
+
 	memset((void *)priv->tcbs[nvmeq->qid], 0, ANS_NVMMU_TCB_SIZE);
 
 	switch (nvmeq->qid) {
@@ -288,6 +291,7 @@ static const struct nvme_ops apple_nvme_ops = {
 };
 
 static const struct udevice_id apple_nvme_ids[] = {
+	{ .compatible = "apple,t8103-nvme-ans2" },
 	{ .compatible = "apple,nvme-ans2" },
 	{ /* sentinel */ }
 };

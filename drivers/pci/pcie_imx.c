@@ -7,9 +7,16 @@
  * Based on upstream Linux kernel driver:
  * pci-imx6.c:		Sean Cross <xobs@kosagi.com>
  * pcie-designware.c:	Jingoo Han <jg1.han@samsung.com>
+ *
+ * This is a legacy PCIe iMX driver kept to support older iMX6 SoCs. It is
+ * rather tied to quite old port of pcie-designware driver from Linux which
+ * suffices only iMX6 specific needs. But now we have modern PCIe iMX driver
+ * (drivers/pci/pcie_dw_imx.c) utilizing all the common DWC specific bits from
+ * (drivers/pci/pcie_dw_common.*). So you are encouraged to add any further iMX
+ * SoC support there or even better if you posses older iMX6 SoCs then switch
+ * those too in order to have a single modern PCIe iMX driver.
  */
 
-#include <common.h>
 #include <init.h>
 #include <log.h>
 #include <malloc.h>
@@ -721,15 +728,31 @@ static int imx_pcie_dm_write_config(struct udevice *dev, pci_dev_t bdf,
 static int imx_pcie_dm_probe(struct udevice *dev)
 {
 	struct imx_pcie_priv *priv = dev_get_priv(dev);
+	int ret;
 
 #if CONFIG_IS_ENABLED(DM_REGULATOR)
 	device_get_supply_regulator(dev, "vpcie-supply", &priv->vpcie);
 #endif
 
 	/* if PERST# valid from dt then assert it */
-	gpio_request_by_name(dev, "reset-gpio", 0, &priv->reset_gpio,
-			     GPIOD_IS_OUT);
-	priv->reset_active_high = dev_read_bool(dev, "reset-gpio-active-high");
+	ret = gpio_request_by_name(dev, "reset-gpio", 0, &priv->reset_gpio,
+				   GPIOD_IS_OUT);
+	if (!ret) {
+		/*
+		 * Legacy property, invert assert logic based on
+		 * reset-gpio-active-high. This won't work if flags are not
+		 * matching the reset-gpio-active-high.
+		 */
+		priv->reset_active_high = dev_read_bool(dev, "reset-gpio-active-high");
+	} else {
+		/*
+		 * Linux kernel upstream property, assert active level based on
+		 * GPIO flags, thus leave priv->reset_active_high=0.
+		 */
+		gpio_request_by_name(dev, "reset-gpios", 0, &priv->reset_gpio,
+				     GPIOD_IS_OUT);
+	}
+
 	if (dm_gpio_is_valid(&priv->reset_gpio)) {
 		dm_gpio_set_value(&priv->reset_gpio,
 				  priv->reset_active_high ? 0 : 1);

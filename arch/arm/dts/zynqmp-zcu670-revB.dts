@@ -49,7 +49,7 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 		autorepeat;
-		sw1 {
+		switch-1 {
 			label = "sw1";
 			gpios = <&gpio 22 GPIO_ACTIVE_HIGH>;
 			linux,code = <BTN_MISC>;
@@ -71,9 +71,10 @@
 		compatible = "iio-hwmon";
 		io-channels = <&vccint 0>, <&vccint 1>, <&vccint 2>, <&vccint 3>;
 	};
-	ina226-vccint-io-bram-ps {
+	ina226-vccint-io-bram {
 		compatible = "iio-hwmon";
-		io-channels = <&vccint_io_bram_ps 0>, <&vccint_io_bram_ps 1>, <&vccint_io_bram_ps 2>, <&vccint_io_bram_ps 3>;
+		io-channels = <&vccint_io_bram_ps 0>, <&vccint_io_bram_ps 1>,
+			      <&vccint_io_bram_ps 2>, <&vccint_io_bram_ps 3>;
 	};
 	ina226-vcc1v8 {
 		compatible = "iio-hwmon";
@@ -109,7 +110,8 @@
 	};
 	ina226-dac-avccaux {
 		compatible = "iio-hwmon";
-		io-channels = <&dac_avccaux 0>, <&dac_avccaux 1>, <&dac_avccaux 2>, <&dac_avccaux 3>;
+		io-channels = <&dac_avccaux 0>, <&dac_avccaux 1>, <&dac_avccaux 2>,
+			      <&dac_avccaux 3>;
 	};
 	ina226-adc-avcc {
 		compatible = "iio-hwmon";
@@ -117,7 +119,8 @@
 	};
 	ina226-adc-avccaux {
 		compatible = "iio-hwmon";
-		io-channels = <&adc_avccaux 0>, <&adc_avccaux 1>, <&adc_avccaux 2>, <&adc_avccaux 3>;
+		io-channels = <&adc_avccaux 0>, <&adc_avccaux 1>, <&adc_avccaux 2>,
+			      <&adc_avccaux 3>;
 	};
 	ina226-dac-avcc {
 		compatible = "iio-hwmon";
@@ -131,7 +134,7 @@
 		clock-frequency = <48000000>;
 	};
 
-	si5381_6: si5381_6 { /* refclk_usb3 - u43 */
+	si5381_6: si5381-6 { /* refclk_usb3 - u43 */
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <26000000>;
@@ -388,7 +391,6 @@
 				reg = <0x45>; /* i2c addr 0x15 */
 			};
 			/* J21 header too */
-
 		};
 		i2c@3 {
 			#address-cells = <1>;
@@ -437,9 +439,11 @@
 			#size-cells = <0>;
 			reg = <1>;
 			/* SI5381 - u43 */
-			/* si5381: clock-generator@68 {
-				reg = <0x68>;
-			};*/
+			/*
+			 * si5381: clock-generator@68 {
+			 *	reg = <0x68>;
+			 * };
+			 */
 		};
 		i2c_si570_user_c0: i2c@2 {
 			#address-cells = <1>;
@@ -573,7 +577,7 @@
 		};
 	};
 
-	pinctrl_i2c0_gpio: i2c0-gpio {
+	pinctrl_i2c0_gpio: i2c0-gpio-grp {
 		mux {
 			groups = "gpio0_14_grp", "gpio0_15_grp";
 			function = "gpio0";
@@ -600,7 +604,7 @@
 		};
 	};
 
-	pinctrl_i2c1_gpio: i2c1-gpio {
+	pinctrl_i2c1_gpio: i2c1-gpio-grp {
 		mux {
 			groups = "gpio0_16_grp", "gpio0_17_grp";
 			function = "gpio0";

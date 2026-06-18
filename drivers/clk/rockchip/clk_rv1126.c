@@ -5,7 +5,6 @@
  * Author: Finley Xiao <finley.xiao@rock-chips.com>
  */
 
-#include <common.h>
 #include <bitfield.h>
 #include <clk-uclass.h>
 #include <dm.h>
@@ -16,11 +15,8 @@
 #include <asm/arch-rockchip/grf_rv1126.h>
 #include <asm/arch-rockchip/hardware.h>
 #include <dm/device-internal.h>
-#include <asm/io.h>
 #include <dm/lists.h>
 #include <dt-bindings/clock/rockchip,rv1126-cru.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define RV1126_CPUCLK_RATE(_rate, _aclk_div, _pclk_div)		\
 {								\

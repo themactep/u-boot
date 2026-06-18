@@ -5,39 +5,76 @@
  * Copyright 2023 Google LLC
  */
 
-#include <common.h>
 #include <mapmem.h>
+#include <tables_csum.h>
 #include <acpi/acpi_table.h>
 #include <asm/global_data.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
+void acpi_update_checksum(struct acpi_table_header *header)
+{
+	header->checksum = 0;
+	header->checksum = table_compute_checksum(header, header->length);
+}
+
 struct acpi_table_header *acpi_find_table(const char *sig)
 {
 	struct acpi_rsdp *rsdp;
 	struct acpi_rsdt *rsdt;
+	struct acpi_xsdt *xsdt;
 	int len, i, count;
 
 	rsdp = map_sysmem(gd_acpi_start(), 0);
 	if (!rsdp)
 		return NULL;
-	rsdt = map_sysmem(rsdp->rsdt_address, 0);
-	len = rsdt->header.length - sizeof(rsdt->header);
-	count = len / sizeof(u32);
+	if (rsdp->xsdt_address) {
+		xsdt = nomap_sysmem(rsdp->xsdt_address, 0);
+		len = xsdt->header.length - sizeof(xsdt->header);
+		count = len / sizeof(u64);
+	} else {
+		if (!rsdp->rsdt_address)
+			return NULL;
+		rsdt = nomap_sysmem(rsdp->rsdt_address, 0);
+		len = rsdt->header.length - sizeof(rsdt->header);
+		count = len / sizeof(u32);
+	}
 	for (i = 0; i < count; i++) {
 		struct acpi_table_header *hdr;
 
-		hdr = map_sysmem(rsdt->entry[i], 0);
+		if (rsdp->xsdt_address)
+			hdr = nomap_sysmem(xsdt->entry[i], 0);
+		else
+			hdr = nomap_sysmem(rsdt->entry[i], 0);
 		if (!memcmp(hdr->signature, sig, ACPI_NAME_LEN))
 			return hdr;
 		if (!memcmp(hdr->signature, "FACP", ACPI_NAME_LEN)) {
 			struct acpi_fadt *fadt = (struct acpi_fadt *)hdr;
 
-			if (!memcmp(sig, "DSDT", ACPI_NAME_LEN) && fadt->dsdt)
-				return map_sysmem(fadt->dsdt, 0);
-			if (!memcmp(sig, "FACS", ACPI_NAME_LEN) &&
-			    fadt->firmware_ctrl)
-				return map_sysmem(fadt->firmware_ctrl, 0);
+			if (!memcmp(sig, "DSDT", ACPI_NAME_LEN)) {
+				void *dsdt;
+
+				if (fadt->header.revision >= 3 && fadt->x_dsdt)
+					dsdt = nomap_sysmem(fadt->x_dsdt, 0);
+				else if (fadt->dsdt)
+					dsdt = nomap_sysmem(fadt->dsdt, 0);
+				else
+					dsdt = NULL;
+				return dsdt;
+			}
+
+			if (!memcmp(sig, "FACS", ACPI_NAME_LEN)) {
+				void *facs;
+
+				if (fadt->header.revision >= 3 &&
+				    fadt->x_firmware_ctrl)
+					facs = nomap_sysmem(fadt->x_firmware_ctrl, 0);
+				else if (fadt->firmware_ctrl)
+					facs = nomap_sysmem(fadt->firmware_ctrl, 0);
+				else
+					facs = NULL;
+				return facs;
+			}
 		}
 	}
 

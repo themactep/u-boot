@@ -6,7 +6,6 @@
 
 #define LOG_CATEGORY UCLASS_SYSRESET
 
-#include <common.h>
 #include <command.h>
 #include <cpu_func.h>
 #include <dm.h>
@@ -32,6 +31,18 @@ int sysreset_request(struct udevice *dev, enum sysreset_t type)
 
 	return ops->request(dev, type);
 }
+
+#if IS_ENABLED(CONFIG_SYSRESET_CMD_RESET_ARGS)
+int sysreset_request_arg(struct udevice *dev, int argc, char * const argv[])
+{
+	struct sysreset_ops *ops = sysreset_get_ops(dev);
+
+	if (!ops->request_arg)
+		return -ENOSYS;
+
+	return ops->request_arg(dev, argc, argv);
+}
+#endif /* CONFIG_SYSRESET_CMD_RESET_ARGS */
 
 int sysreset_get_status(struct udevice *dev, char *buf, int size)
 {
@@ -72,6 +83,26 @@ int sysreset_walk(enum sysreset_t type)
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_SYSRESET_CMD_RESET_ARGS)
+int sysreset_walk_arg(int argc, char * const argv[])
+{
+	struct udevice *dev;
+	int ret = -ENOSYS;
+
+	while (ret != -EINPROGRESS && ret != -EPROTONOSUPPORT) {
+		for (uclass_first_device(UCLASS_SYSRESET, &dev);
+		     dev;
+		     uclass_next_device(&dev)) {
+			ret = sysreset_request_arg(dev, argc, argv);
+			if (ret == -EINPROGRESS || ret == -EPROTONOSUPPORT)
+				break;
+		}
+	}
+
+	return ret;
+}
+#endif /* CONFIG_SYSRESET_CMD_RESET_ARGS */
+
 int sysreset_get_last_walk(void)
 {
 	struct udevice *dev;
@@ -103,7 +134,7 @@ void sysreset_walk_halt(enum sysreset_t type)
 		mdelay(100);
 
 	/* Still no reset? Give up */
-	if (spl_phase() <= PHASE_SPL)
+	if (xpl_phase() <= PHASE_SPL)
 		log_err("no sysreset\n");
 	else
 		log_err("System reset not supported on this platform\n");
@@ -117,7 +148,6 @@ void reset_cpu(void)
 {
 	sysreset_walk_halt(SYSRESET_WARM);
 }
-
 
 #if IS_ENABLED(CONFIG_SYSRESET_CMD_RESET)
 int do_reset(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
@@ -133,6 +163,11 @@ int do_reset(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 
 	printf("resetting ...\n");
 	mdelay(100);
+
+#if IS_ENABLED(CONFIG_SYSRESET_CMD_RESET_ARGS)
+	if (argc > 1 && sysreset_walk_arg(argc, argv) == -EINPROGRESS)
+		return 0;
+#endif
 
 	sysreset_walk_halt(reset_type);
 

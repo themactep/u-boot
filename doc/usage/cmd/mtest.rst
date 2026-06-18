@@ -1,6 +1,9 @@
 .. SPDX-License-Identifier: GPL-2.0+
 .. Copyright 2022, Heinrich Schuchardt <xypron.glpk@gmx.de>
 
+.. index::
+   single: mtest (command)
+
 mtest command
 =============
 
@@ -59,8 +62,3 @@ Configuration
 -------------
 
 The mtest command is enabled by CONFIG_CMD_MEMTEST=y.
-
-Return value
-------------
-
-The return value $? is 0 (true) if the command succeeds, 1 (false) otherwise.

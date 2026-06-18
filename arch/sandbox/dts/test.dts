@@ -13,8 +13,10 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/sandbox-gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/sandbox-pinmux.h>
 #include <dt-bindings/mux/mux.h>
+#include <dt-bindings/phy/phy.h>
 
 / {
 	model = "sandbox";
@@ -43,6 +45,10 @@
 		mmc4 = "/mmc4";
 		mmc5 = "/mmc5";
 		mmc6 = "/mmc6";
+		mmc7 = "/mmc7";
+		mmc8 = "/mmc8";
+		mmc9 = "/mmc9";
+		mmc10 = "/mmc10";
 		pci0 = &pci0;
 		pci1 = &pci1;
 		pci2 = &pci2;
@@ -77,7 +83,7 @@
 
 		event_log: tcg_event_log {
 			no-map;
-			reg = <(CFG_SYS_SDRAM_SIZE - 0x2000) 0x2000>;
+			reg = <(CFG_SYS_SDRAM_BASE + 0x100000) 0x2000>;
 		};
 	};
 
@@ -100,6 +106,12 @@
 			bootscr-ram-offset = /bits/ 64 <0x12345678>;
 			bootscr-flash-offset = /bits/ 64 <0>;
 			bootscr-flash-size = /bits/ 64 <0x2000>;
+			boot-led = <&sandbox_led_green>;
+			activity-led = <&sandbox_led_red>;
+			testing-bool;
+			testing-int = <123>;
+			testing-str = "testing";
+			testing-phandle = <&phandle_node_1>;
 		};
 	};
 
@@ -122,6 +134,7 @@
 			font-size = <30>;
 			menu-inset = <3>;
 			menuitem-gap-y = <1>;
+			white-on-black;
 		};
 
 		cedit-theme {
@@ -290,6 +303,12 @@
 		compatible = "sandbox,dsi-host";
 	};
 
+	phandle_node_1: phandle-node-1 {
+	};
+
+	phandle_node_2: phandle-node-2 {
+	};
+
 	a-test {
 		reg = <0 1>;
 		compatible = "denx,u-boot-fdt-test";
@@ -328,6 +347,7 @@
 		interrupts-extended = <&irq 3 0>;
 		acpi,name = "GHIJ";
 		phandle-value = <&gpio_c 10>, <0xFFFFFFFF 20>, <&gpio_a 30>;
+		phandle-nodes = <&phandle_node_1>, <&phandle_node_2>;
 
 		mux-controls = <&muxcontroller0 0>, <&muxcontroller0 1>,
 			       <&muxcontroller0 2>, <&muxcontroller0 3>,
@@ -440,6 +460,10 @@
 		mux-control-names = "mux0";
 	};
 
+	multimatch-test {
+		compatible = "sandbox,multimatch-test";
+	};
+
 	phy_provider0: gen_phy@0 {
 		compatible = "sandbox,phy";
 		#phy-cells = <1>;
@@ -477,6 +501,65 @@
 		compatible = "simple-bus";
 		phys = <&phy_provider3 0 0>;
 		phy-names = "phy1";
+	};
+
+	/* PHY common props test nodes */
+	phy_common_props_missing: phy-common-props-missing {
+		/* empty: no rx-polarity or tx-polarity properties */
+	};
+
+	phy_common_props_more_values: phy-common-props-more-values {
+		/* 3 values but only 2 names => count mismatch */
+		rx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT PHY_POL_NORMAL>;
+		rx-polarity-names = "sgmii", "2500base-x";
+		tx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT PHY_POL_NORMAL>;
+		tx-polarity-names = "sgmii", "2500base-x";
+	};
+
+	phy_common_props_single: phy-common-props-single {
+		/* 1 value, no names array => value applies to all modes */
+		rx-polarity = <PHY_POL_INVERT>;
+		tx-polarity = <PHY_POL_INVERT>;
+	};
+
+	phy_common_props_more_names: phy-common-props-more-names {
+		/* 2 values but 3 names => count mismatch */
+		rx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		rx-polarity-names = "sgmii", "2500base-x", "1000base-x";
+		tx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		tx-polarity-names = "sgmii", "2500base-x", "1000base-x";
+	};
+
+	phy_common_props_find_by_name: phy-common-props-find-by-name {
+		/* valid 3-element arrays, lookup by mode name */
+		rx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT PHY_POL_AUTO>;
+		rx-polarity-names = "sgmii", "2500base-x", "usb-ss";
+		tx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT PHY_POL_NORMAL>;
+		tx-polarity-names = "sgmii", "2500base-x", "1000base-x";
+	};
+
+	phy_common_props_no_default: phy-common-props-no-default {
+		/* name not in array, no "default" entry => -EINVAL */
+		rx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		rx-polarity-names = "2500base-x", "1000base-x";
+		tx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		tx-polarity-names = "2500base-x", "1000base-x";
+	};
+
+	phy_common_props_with_default: phy-common-props-with-default {
+		/* name not in array, but "default" entry exists */
+		rx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		rx-polarity-names = "2500base-x", "default";
+		tx-polarity = <PHY_POL_NORMAL PHY_POL_INVERT>;
+		tx-polarity-names = "2500base-x", "default";
+	};
+
+	phy_common_props_unsupported: phy-common-props-unsupported {
+		/* PHY_POL_AUTO is not supported for manual-only modes */
+		rx-polarity = <PHY_POL_AUTO>;
+		rx-polarity-names = "sgmii";
+		tx-polarity = <PHY_POL_AUTO>;
+		tx-polarity-names = "sgmii";
 	};
 
 	some-bus {
@@ -521,6 +604,9 @@
 	};
 
 	f-test {
+		#interrupt-cells = <2>;
+		interrupt-parent = <&irq>;
+		interrupts = <4 0>;
 		compatible = "denx,u-boot-fdt-test";
 	};
 
@@ -631,9 +717,10 @@
 		clocks = <&clk_fixed>,
 			 <&clk_sandbox 1>,
 			 <&clk_sandbox 0>,
+			 <&ccf 11>,
 			 <&clk_sandbox 3>,
 			 <&clk_sandbox 2>;
-		clock-names = "fixed", "i2c", "spi", "uart2", "uart1";
+		clock-names = "fixed", "i2c", "spi", "i2c_root", "uart2", "uart1";
 	};
 
 	clk-test2 {
@@ -654,6 +741,7 @@
 
 	ccf: clk-ccf {
 		compatible = "sandbox,clk-ccf";
+		#clock-cells = <1>;
 	};
 
 	efi-media {
@@ -800,7 +888,8 @@
 			gpio-controller;
 			#gpio-cells = <1>;
 			gpio-bank-name = "a";
-			sandbox,gpio-count = <20>;
+			sandbox,gpio-count = <25>;
+			gpio-line-names = "", "eth1-reset", "rtc-irq";
 			hog_input_active_low {
 				gpio-hog;
 				input;
@@ -829,6 +918,7 @@
 			#gpio-cells = <5>;
 			gpio-bank-name = "b";
 			sandbox,gpio-count = <10>;
+			gpio-line-names = "factory-reset";
 		};
 
 		gpio_c: pinmux-gpios {
@@ -838,6 +928,42 @@
 			gpio-bank-name = "c";
 			sandbox,gpio-count = <10>;
 		};
+	};
+
+	icc0: interconnect-0 {
+		compatible = "sandbox,interconnect0";
+		#interconnect-cells = <1>;
+	};
+
+	icc1: interconnect-1 {
+		compatible = "sandbox,interconnect1";
+		#interconnect-cells = <1>;
+	};
+
+	icc2: interconnect-2 {
+		compatible = "sandbox,interconnect2";
+		#interconnect-cells = <1>;
+	};
+
+	icc3: interconnect-3 {
+		compatible = "sandbox,interconnect3";
+		#interconnect-cells = <1>;
+	};
+
+	icc4: interconnect-4 {
+		compatible = "sandbox,interconnect4";
+		#interconnect-cells = <1>;
+	};
+
+	interconnect-test-0 {
+		compatible = "sandbox,interconnect-test";
+		interconnects = <&icc0 0 &icc3 0>;
+	};
+
+	interconnect-test-1 {
+		compatible = "sandbox,interconnect-test";
+		interconnects = <&icc1 0 &icc4 0>;
+		interconnect-names = "icc-path";
 	};
 
 	i2c@0 {
@@ -887,8 +1013,8 @@
 			sandbox,emul = <&emul1>;
 		};
 
-		i2c_emul: emul {
-			reg = <0xff>;
+		i2c_emul: emul@7f {
+			reg = <0x7f>;
 			compatible = "sandbox,i2c-emul-parent";
 			emul_eeprom: emul-eeprom {
 				compatible = "sandbox,i2c-eeprom";
@@ -903,7 +1029,7 @@
 			};
 		};
 
-		sandbox_pmic: sandbox_pmic {
+		sandbox_pmic: sandbox_pmic@40 {
 			reg = <0x40>;
 			sandbox,emul = <&emul_pmic0>;
 		};
@@ -912,6 +1038,14 @@
 			reg = <0x41>;
 			sandbox,emul = <&emul_pmic1>;
 		};
+	};
+
+	i3c0 {
+		compatible = "sandbox,i3c";
+	};
+
+	i3c1 {
+		compatible = "sandbox,i3c";
 	};
 
 	bootcount@0 {
@@ -969,12 +1103,12 @@
 	leds {
 		compatible = "gpio-leds";
 
-		iracibble {
+		sandbox_led_red: iracibble {
 			gpios = <&gpio_a 1 0>;
 			label = "sandbox:red";
 		};
 
-		martinet {
+		sandbox_led_green: martinet {
 			gpios = <&gpio_a 2 0>;
 			label = "sandbox:green";
 		};
@@ -989,6 +1123,65 @@
 			gpios = <&gpio_a 6 0>;
 			/* label intentionally omitted */
 			default-state = "off";
+		};
+
+		led-20 {
+			gpios = <&gpio_a 20 0>;
+			/* label intentionally omitted */
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			function-enumerator = <20>;
+		};
+
+		led-21 {
+			gpios = <&gpio_a 21 0>;
+			/* label intentionally omitted */
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+		};
+
+		led-22 {
+			gpios = <&gpio_a 22 0>;
+			/* label intentionally omitted */
+			function = LED_FUNCTION_STATUS;
+		};
+
+		led-23 {
+			gpios = <&gpio_a 23 0>;
+			/* label intentionally omitted */
+			color = <LED_COLOR_ID_GREEN>;
+		};
+
+		led-24 {
+			gpios = <&gpio_a 24 0>;
+			label = "sandbox:function";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+		};
+	};
+
+	lvds-encoder {
+		compatible = "lvds-encoder";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				bridge_input: endpoint {
+					/* link to output */
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				bridge_output: endpoint {
+					remote-endpoint = <&panel_input>;
+				};
+			};
 		};
 	};
 
@@ -1125,6 +1318,34 @@
 		status = "disabled";
 		compatible = "sandbox,mmc";
 		filename = "mmc6.img";
+	};
+
+	/* This is used for Android boot image v4 tests */
+	mmc7 {
+		status = "disabled";
+		compatible = "sandbox,mmc";
+		filename = "mmc7.img";
+	};
+
+	/* This is used for Android boot image v2 tests. */
+	mmc8 {
+		status = "disabled";
+		compatible = "sandbox,mmc";
+		filename = "mmc8.img";
+	};
+
+	/* This is used for zip/unzip/gzwrite tests. */
+	mmc9 {
+		status = "disabled";
+		compatible = "sandbox,mmc";
+		filename = "mmc9.img";
+	};
+
+	/* This is used for RAUC boot tests */
+	mmc10 {
+		status = "disabled";
+		compatible = "sandbox,mmc";
+		filename = "mmc10.img";
 	};
 
 	pch {
@@ -1333,6 +1554,27 @@
 	panel {
 		compatible = "simple-panel";
 		backlight = <&backlight 0 100>;
+
+		display-timings {
+			timing@0 {
+				/* 1280x800@60Hz */
+				clock-frequency = <68000000>;
+				hactive = <1280>;
+				hfront-porch = <48>;
+				hback-porch = <18>;
+				hsync-len = <30>;
+				vactive = <800>;
+				vfront-porch = <3>;
+				vback-porch = <12>;
+				vsync-len = <5>;
+			};
+		};
+
+		port {
+			panel_input: endpoint {
+				remote-endpoint = <&bridge_output>;
+			};
+		};
 	};
 
 	scsi {
@@ -1497,7 +1739,7 @@
 				flash-stick@1 {
 					reg = <1>;
 					compatible = "sandbox,usb-flash";
-					sandbox,filepath = "testflash1.bin";
+					sandbox,filepath = "flash1.img";
 				};
 
 				flash-stick@2 {
@@ -1542,10 +1784,10 @@
 			spmi_gpios: gpios@c000 {
 				compatible = "qcom,pm8916-gpio";
 				reg = <0xc000 0x400>;
+				gpio-ranges = <&spmi_gpios 0 0 4>;
 				gpio-controller;
 				gpio-count = <4>;
 				#gpio-cells = <2>;
-				gpio-bank-name="spmi";
 			};
 		};
 	};
@@ -1680,7 +1922,7 @@
 		pinctrl-0 = <&pinctrl_gpios>, <&pinctrl_i2s>;
 		pinctrl-1 = <&pinctrl_spi>, <&pinctrl_i2c>;
 
-		pinctrl_gpios: gpios {
+		pinctrl_gpios: pins-gpios {
 			gpio0 {
 				pins = "P5";
 				function = "GPIO";
@@ -1704,7 +1946,7 @@
 			};
 		};
 
-		pinctrl_i2c: i2c {
+		pinctrl_i2c: pins-i2c {
 			groups {
 				groups = "I2C_UART";
 				function = "I2C";
@@ -1716,12 +1958,12 @@
 			};
 		};
 
-		pinctrl_i2s: i2s {
+		pinctrl_i2s: pins-i2s {
 			groups = "SPI_I2S";
 			function = "I2S";
 		};
 
-		pinctrl_spi: spi {
+		pinctrl_spi: pins-spi {
 			groups = "SPI_I2S";
 			function = "SPI";
 
@@ -1914,6 +2156,130 @@
 				compatible = "sandbox,arm-ffa";
 		};
 	};
+
+	nand-controller {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "sandbox,nand";
+
+		nand@0 {
+			reg = <0>;
+			nand-ecc-mode = "soft";
+			sandbox,id = [00 e3];
+			sandbox,erasesize = <(8 * 1024)>;
+			sandbox,oobsize = <16>;
+			sandbox,pagesize = <512>;
+			sandbox,pages = <0x2000>;
+			sandbox,err-count = <1>;
+			sandbox,err-step-size = <512>;
+		};
+
+		/* MT29F64G08AKABA */
+		nand@1 {
+			reg = <1>;
+			nand-ecc-mode = "soft_bch";
+			sandbox,id = [2C 48 00 26 89 00 00 00];
+			sandbox,onfi = [
+				4f 4e 46 49 0e 00 5a 00
+				ff 01 00 00 00 00 03 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				4d 49 43 52 4f 4e 20 20
+				20 20 20 20 4d 54 32 39
+				46 36 34 47 30 38 41 4b
+				41 42 41 43 35 20 20 20
+				2c 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 10 00 00 e0 00 00 02
+				00 00 1c 00 80 00 00 00
+				00 10 00 00 02 23 01 50
+				00 01 05 01 00 00 04 00
+				04 01 1e 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				0e 1f 00 1f 00 f4 01 ac
+				0d 19 00 c8 00 00 00 00
+				00 00 00 00 00 00 0a 07
+				19 00 00 00 00 00 00 00
+				00 00 00 00 01 00 01 00
+				00 00 04 10 01 81 04 02
+				02 01 1e 90 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 00 00 00
+				00 00 00 00 00 03 20 7d
+			];
+			sandbox,erasesize = <(512 * 1024)>;
+			sandbox,oobsize = <224>;
+			sandbox,pagesize = <4096>;
+			sandbox,pages = <0x200000>;
+			sandbox,err-count = <3>;
+			sandbox,err-step-size = <512>;
+		};
+	};
+
+	graph1 {
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				reg = <0>;
+
+				endpoint@0 {
+					reg = <0>;
+				};
+
+				endpoint@1 {
+					reg = <1>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				endpoint {
+					test-property-0;
+				};
+			};
+
+			port@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				reg = <2>;
+
+				graph2_link: endpoint@0 {
+					reg = <0>;
+					test-property-1;
+					remote-endpoint = <&graph1_link>;
+				};
+
+				endpoint@1 {
+					reg = <1>;
+				};
+			};
+		};
+	};
+
+	graph2 {
+		port {
+			graph1_link: endpoint {
+				remote-endpoint = <&graph2_link>;
+			};
+		};
+	};
+
+	aes-engine {
+		compatible = "software-aes-engine";
+	};
 };
 
 #include "sandbox_pmic.dtsi"
@@ -1921,6 +2287,10 @@
 
 #ifdef CONFIG_SANDBOX_VPL
 #include "sandbox_vpl.dtsi"
+#endif
+
+#if IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT)
+#include "sandbox_capsule.dtsi"
 #endif
 
 #include "cedit.dtsi"

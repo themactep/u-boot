@@ -3,7 +3,6 @@
  * Copyright 2021 NXP
  */
 
-#include <common.h>
 #include <div64.h>
 #include <asm/io.h>
 #include <errno.h>
@@ -11,11 +10,8 @@
 #include <asm/arch/cgc.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/global_data.h>
 #include <linux/delay.h>
 #include <hang.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static struct cgc1_regs *cgc1_regs = (struct cgc1_regs *)0x292C0000UL;
 static struct cgc2_regs *cgc2_regs = (struct cgc2_regs *)0x2da60000UL;

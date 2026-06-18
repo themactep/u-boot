@@ -5,7 +5,7 @@
  * Copyright 2019 Siemens AG
  *
  */
-#include <common.h>
+#include <cli_hush.h>
 #include <command.h>
 #include <dm.h>
 #include <env.h>
@@ -22,13 +22,15 @@
 #include <asm/gpio.h>
 #include <asm/arch/imx8-pins.h>
 #include <asm/arch/iomux.h>
-#include <firmware/imx/sci/sci.h>
 #include <asm/arch/sys_proto.h>
 #ifndef CONFIG_SPL
 #include <asm/arch-imx8/clock.h>
 #endif
 #include <linux/delay.h>
+#include "../common/board.h"
+#include "../common/eeprom.h"
 #include "../common/factoryset.h"
+#include <firmware/imx/sci/sci.h>
 
 #define GPIO_PAD_CTRL \
 		((SC_PAD_CONFIG_NORMAL << PADRING_CONFIG_SHIFT) | \
@@ -64,8 +66,7 @@ int board_early_init_f(void)
 	sc_pm_clock_rate_t rate = SC_80MHZ;
 	int ret;
 
-	ret = sc_pm_setup_uart(SC_R_UART_0, rate);
-	ret |= sc_pm_setup_uart(SC_R_UART_2, rate);
+	ret = sc_pm_setup_uart(SC_R_UART_2, rate);
 	if (ret)
 		return ret;
 
@@ -73,6 +74,40 @@ int board_early_init_f(void)
 
 	return 0;
 }
+
+#ifndef CONFIG_XPL_BUILD
+void board_mem_get_layout(u64 *phys_sdram_1_start,
+			  u64 *phys_sdram_1_size,
+			  u64 *phys_sdram_2_start,
+			  u64 *phys_sdram_2_size)
+{
+	sc_faddr_t addr_start, addr_end;
+	sc_faddr_t sdram_1_size, sdram_2_size;
+	sc_err_t sc_err;
+
+	sc_err = sc_rm_get_memreg_info(-1, 6, &addr_start, &addr_end);
+	if (sc_err == SC_ERR_NONE) {
+		if (addr_end < 0x100000000) {
+			/* only lower RAM available */
+			sdram_1_size = (addr_end + 1) - PHYS_SDRAM_1;
+			sdram_2_size = 0;
+		} else {
+			/* lower RAM (2 GB) und upper RAM available */
+			sdram_1_size = SZ_2G;
+			sdram_2_size = (addr_end + 1) - PHYS_SDRAM_2;
+		}
+	} else {
+		/* Get default in case it would fail */
+		sdram_1_size = PHYS_SDRAM_1_SIZE;
+		sdram_2_size = PHYS_SDRAM_2_SIZE;
+	}
+
+	*phys_sdram_1_start = PHYS_SDRAM_1;
+	*phys_sdram_1_size = sdram_1_size;
+	*phys_sdram_2_start = PHYS_SDRAM_2;
+	*phys_sdram_2_size = sdram_2_size;
+}
+#endif /* ! CONFIG_XPL_BUILD */
 
 #define ENET_PHY_RESET	IMX_GPIO_NR(0, 3)
 #define ENET_TEST_1	IMX_GPIO_NR(0, 8)
@@ -156,14 +191,14 @@ int setup_gpr_fec(void)
 	 *	0: internal clock
 	 *	1: external clock --->  your choice for RMII
 	 *
-	 * CLKDIV_SEL: it controls a div by 2 on the internal clock path à
-	 *	it should be don’t care when using external clock
+	 * CLKDIV_SEL: it controls a div by 2 on the internal clock path a
+	 *	it should be don't care when using external clock
 	 *	0: non-divided clock
 	 *	1: clock divided by 2
 	 * 50_DISABLE or 125_DISABLE:
-	 *	it’s used to disable the clock tree going outside the chip
+	 *	it's used to disable the clock tree going outside the chip
 	 *	when reference clock is generated internally.
-	 *	It should be don’t care when reference clock is provided
+	 *	It should be don't care when reference clock is provided
 	 *	externally.
 	 *	0: clock is enabled
 	 *	1: clock is disabled
@@ -236,7 +271,7 @@ void reset_cpu(void)
 {
 }
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_XPL_BUILD
 /* LED's */
 static int board_led_init(void)
 {
@@ -266,17 +301,13 @@ static int board_led_init(void)
 	mdelay(1);
 	return ret;
 }
-#endif /* !CONFIG_SPL_BUILD */
+#endif /* !CONFIG_XPL_BUILD */
 
 int checkboard(void)
 {
 	puts("Board: Capricorn\n");
 
-	/*
-	 * Running build_info() doesn't work with current SCFW blob.
-	 * Uncomment below call when new blob is available.
-	 */
-	/*build_info();*/
+	build_info();
 
 	print_bootinfo();
 	return 0;
@@ -284,6 +315,32 @@ int checkboard(void)
 
 int board_init(void)
 {
+	struct chip_data eeprom_data = {};
+	char module_name[16];
+	int ret;
+
+	ret = siemens_ee_setup();
+	if (ret) {
+		printf("'siemens_ee_setup' failed, ret: %d\n", ret);
+		goto skip;
+	}
+
+	/* Get module name from EEPROM */
+	siemens_ee_read_data(SIEMENS_EE_ADDR_DDR3, module_name,
+			     sizeof(module_name));
+	printf("CPU module: %s\n", module_name);
+
+	ret = siemens_ee_read_data(SIEMENS_EE_ADDR_CHIP,
+				   (uchar *)&eeprom_data,
+				   sizeof(eeprom_data));
+	if (ret) {
+		printf("'siemens_ee_read_data' failed, ret: %d\n", ret);
+		goto skip;
+	}
+
+	printf("HW Version: %s\n", eeprom_data.shwver);
+skip:
+
 	setup_fec();
 	return 0;
 }
@@ -300,16 +357,6 @@ int board_mmc_get_env_dev(int devno)
 	return devno;
 }
 
-static int check_mmc_autodetect(void)
-{
-	char *autodetect_str = env_get("mmcautodetect");
-
-	if (autodetect_str && (strcmp(autodetect_str, "yes") == 0))
-		return 1;
-
-	return 0;
-}
-
 /* This should be defined for each board */
 __weak int mmc_map_to_kernel_blk(int dev_no)
 {
@@ -318,32 +365,52 @@ __weak int mmc_map_to_kernel_blk(int dev_no)
 
 void board_late_mmc_env_init(void)
 {
-	char cmd[32];
-	char mmcblk[32];
 	u32 dev_no = mmc_get_env_dev();
 
-	if (!check_mmc_autodetect())
-		return;
-
 	env_set_ulong("mmcdev", dev_no);
-
-	/* Set mmcblk env */
-	sprintf(mmcblk, "/dev/mmcblk%dp2 rootwait rw",
-		mmc_map_to_kernel_blk(dev_no));
-	env_set("mmcroot", mmcblk);
-
-	sprintf(cmd, "mmc dev %d", dev_no);
-	run_command(cmd, 0);
 }
 
-#ifndef CONFIG_SPL_BUILD
-int factoryset_read_eeprom(int i2c_addr);
+#if defined(CONFIG_HUSH_INIT_VAR)
+int hush_init_var(void)
+{
+	sc_misc_bt_t boot_type;
 
+	if (sc_misc_get_boot_type(-1, &boot_type) != 0) {
+		puts("boottype cannot be retrieved\n");
+		return 0;
+	}
+
+	/*
+	 * Set here explicitly a hush shell variable, so if a saveenv
+	 * happens, this variable is *not* saved in U-Boot environment.
+	 *
+	 * This is for devices which are already in the field essential,
+	 * as if such a device breaks, the cutsomer gets a new device
+	 * with a new U-Boot version (and so a new U-Boot environment).
+	 *
+	 * But the customer makes a downgrade to an older U-Boot version,
+	 * which does not have this code in, and runs now with a new
+	 * U-Boot Environment (yes, protected Environment is not enabled
+	 * there) and the old U-Boot must still work with the new U-Boot
+	 * Environment. So we cannot store this variable in U-Boot
+	 * Environment as a stored value will in this case never be over-
+	 * written.
+	 */
+	if (boot_type == 1) {
+		printf("boot-container fallback ocured\n");
+		set_local_var("fallback=1", 0);
+	}
+
+	return 0;
+}
+#endif
+
+#ifndef CONFIG_XPL_BUILD
 static int load_parameters_from_factoryset(void)
 {
 	int ret;
 
-	ret = factoryset_read_eeprom(EEPROM_I2C_ADDR);
+	ret = factoryset_read_eeprom(SIEMENS_EE_I2C_ADDR);
 	if (ret)
 		return ret;
 
@@ -446,4 +513,4 @@ U_BOOT_CMD(
 	"Reset eth phy",
 	"[print]"
 );
-#endif /* ! CONFIG_SPL_BUILD */
+#endif /* ! CONFIG_XPL_BUILD */

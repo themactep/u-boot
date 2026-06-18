@@ -8,7 +8,6 @@
  */
 
 #include <clk.h>
-#include <common.h>
 #include <dm.h>
 #include <generic-phy.h>
 #include <log.h>
@@ -197,7 +196,7 @@ static int xhci_dwc3_probe(struct udevice *dev)
 		reg |= DWC3_GUSB2PHYCFG_USBTRDTIM_16BIT;
 	}
 
-	if (dev_read_bool(dev, "snps,dis_enblslpm-quirk"))
+	if (dev_read_bool(dev, "snps,dis_enblslpm_quirk"))
 		reg &= ~DWC3_GUSB2PHYCFG_ENBLSLPM;
 
 	if (dev_read_bool(dev, "snps,dis-u2-freeclk-exists-quirk"))
@@ -238,6 +237,7 @@ static int xhci_dwc3_remove(struct udevice *dev)
 }
 
 static const struct udevice_id xhci_dwc3_ids[] = {
+	{ .compatible = "apple,t8103-dwc3" },
 	{ .compatible = "snps,dwc3" },
 	{ }
 };

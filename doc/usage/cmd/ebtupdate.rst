@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: ebtupdate (command)
+
 ebtupdate command
 =================
 
@@ -61,9 +64,3 @@ Configuration
 
 The ebtupdate command is only available if CONFIG_CMD_EBTUPDATE=y and
 only on Tegra 2 and Tegra 3 configurations.
-
-Return value
-------------
-
-The return value $? is set to 0 (true) if everything went successfully. If an
-error occurs, the return value $? is set to 1 (false).

@@ -9,8 +9,9 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
-#include <common.h>
 #include <linux/bitops.h>
+
+struct spinand_info;
 
 /* SPI mode flags */
 #define SPI_CPHA	BIT(0)	/* clock phase (1 = SPI_CLOCK_PHASE_SECOND) */
@@ -38,6 +39,12 @@
 #define SPI_PREAMBLE_END_BYTE	0xec
 
 #define SPI_DEFAULT_WORDLEN	8
+
+#define SPI_3BYTE_MODE 0x0
+#define SPI_4BYTE_MODE 0x1
+
+/* Max no. of CS supported per spi device */
+#define SPI_CS_CNT_MAX	2
 
 /**
  * struct dm_spi_bus - SPI bus info
@@ -70,11 +77,13 @@ struct dm_spi_bus {
  * @cs:		Chip select number (0..n-1)
  * @max_hz:	Maximum bus speed that this slave can tolerate
  * @mode:	SPI mode to use for this device (see SPI mode flags)
+ * @wordlen:	Word length in bits to use for this device
  */
 struct dm_spi_slave_plat {
-	unsigned int cs;
+	unsigned int cs[SPI_CS_CNT_MAX];
 	uint max_hz;
 	uint mode;
+	unsigned int wordlen;
 };
 
 /**
@@ -156,6 +165,17 @@ struct spi_slave {
 #define SPI_XFER_BEGIN		BIT(0)	/* Assert CS before transfer */
 #define SPI_XFER_END		BIT(1)	/* Deassert CS after transfer */
 #define SPI_XFER_ONCE		(SPI_XFER_BEGIN | SPI_XFER_END)
+#define SPI_XFER_U_PAGE		BIT(4)
+#define SPI_XFER_STACKED	BIT(5)
+#define SPI_XFER_LOWER		BIT(6)
+
+	/*
+	 * Flag indicating that the spi-controller has multi chip select
+	 * capability and can assert/de-assert more than one chip select
+	 * at once.
+	 */
+	bool multi_cs_cap;
+	u32 bytemode;
 };
 
 /**
@@ -521,6 +541,16 @@ struct dm_spi_ops {
 	 */
 	int (*get_mmap)(struct udevice *dev, ulong *map_basep,
 			uint *map_sizep, uint *offsetp);
+
+	/**
+	 * setup_for_spinand() - Setup the SPI for attached SPI NAND
+	 *
+	 * @dev:	The SPI flash slave device
+	 * @spinand_info: The SPI NAND info to configure for
+	 * @return 0 if OK, -ve value on error
+	 */
+	int (*setup_for_spinand)(struct spi_slave *slave,
+				 const struct spinand_info *spinand_info);
 };
 
 struct dm_spi_emul_ops {
@@ -630,17 +660,6 @@ int spi_chip_select(struct udevice *slave);
 int spi_find_chip_select(struct udevice *bus, int cs, struct udevice **devp);
 
 /**
- * spi_slave_of_to_plat() - decode standard SPI platform data
- *
- * This decodes the speed and mode for a slave from a device tree node
- *
- * @blob:	Device tree blob
- * @node:	Node offset to read from
- * @plat:	Place to put the decoded information
- */
-int spi_slave_of_to_plat(struct udevice *dev, struct dm_spi_slave_plat *plat);
-
-/**
  * spi_cs_info() - Check information on a chip select
  *
  * This checks a particular chip select on a bus to see if it has a device
@@ -702,6 +721,18 @@ int dm_spi_claim_bus(struct udevice *dev);
 void dm_spi_release_bus(struct udevice *dev);
 
 /**
+ * Set the word length for SPI transactions
+ *
+ * Set the word length (number of bits per word) for SPI transactions.
+ *
+ * @slave:	The SPI slave
+ * @wordlen:	The number of bits in a word
+ *
+ * Returns: 0 on success, -1 on failure.
+ */
+int dm_spi_set_wordlen(struct udevice *dev, unsigned int wordlen);
+
+/**
  * SPI transfer
  *
  * This writes "bitlen" bits out the SPI MOSI port and simultaneously clocks
@@ -743,5 +774,7 @@ int dm_spi_get_mmap(struct udevice *dev, ulong *map_basep, uint *map_sizep,
 /* Access the operations for a SPI device */
 #define spi_get_ops(dev)	((struct dm_spi_ops *)(dev)->driver->ops)
 #define spi_emul_get_ops(dev)	((struct dm_spi_emul_ops *)(dev)->driver->ops)
+
+int spi_get_env_dev(void);
 
 #endif	/* _SPI_H_ */

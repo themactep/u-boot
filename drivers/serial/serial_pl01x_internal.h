@@ -26,11 +26,7 @@ struct pl01x_regs {
 	u32	pl010_lcrl;	/* 0x10 Line control register, low byte */
 	u32	pl010_cr;	/* 0x14 Control register */
 	u32	fr;		/* 0x18 Flag register (Read only) */
-#ifdef CONFIG_PL011_SERIAL_RLCR
-	u32	pl011_rlcr;	/* 0x1c Receive line control register */
-#else
 	u32	reserved;
-#endif
 	u32	ilpr;		/* 0x20 IrDA low-power counter register */
 	u32	pl011_ibrd;	/* 0x24 Integer baud rate register */
 	u32	pl011_fbrd;	/* 0x28 Fractional baud rate register */
@@ -91,7 +87,6 @@ struct pl01x_priv {
 #define UART_PL010_LCRH_EPS             (1 << 2)
 #define UART_PL010_LCRH_PEN             (1 << 1)
 #define UART_PL010_LCRH_BRK             (1 << 0)
-
 
 #define UART_PL010_BAUD_460800            1
 #define UART_PL010_BAUD_230400            3

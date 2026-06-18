@@ -3,13 +3,10 @@
  * Copyright 2022 Marek Vasut <marex@denx.de>
  */
 
-#include <common.h>
 #include <asm/io.h>
 #include <asm-generic/gpio.h>
 
 #include "lpddr4_timing.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 u8 dh_get_memcfg(void)
 {

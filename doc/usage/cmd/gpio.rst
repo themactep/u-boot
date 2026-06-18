@@ -1,5 +1,8 @@
 .. SPDX-License-Identifier: GPL-2.0+:
 
+.. index::
+   single: gpio (command)
+
 gpio command
 ============
 
@@ -124,9 +127,3 @@ Configuration
 
 The *gpio* command is only available if CONFIG_CMD_GPIO=y.
 The *gpio read* command is only available if CONFIG_CMD_GPIO_READ=y.
-
-Return value
-------------
-
-If the command succeds the return value $? is set to 0. If an error occurs, the
-return value $? is set to 1.

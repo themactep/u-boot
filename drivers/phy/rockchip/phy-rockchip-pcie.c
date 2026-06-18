@@ -7,10 +7,8 @@
  * Copyright (C) 2016 ROCKCHIP, Inc.
  */
 
-#include <common.h>
 #include <clk.h>
 #include <dm.h>
-#include <asm/global_data.h>
 #include <dm/device_compat.h>
 #include <generic-phy.h>
 #include <reset.h>
@@ -19,8 +17,6 @@
 #include <asm/io.h>
 #include <linux/iopoll.h>
 #include <asm/arch-rockchip/clock.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /*
  * The higher 16-bit of this register is used for write protection

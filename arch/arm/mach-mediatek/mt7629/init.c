@@ -5,7 +5,7 @@
  */
 
 #include <clk.h>
-#include <common.h>
+#include <config.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <init.h>
@@ -27,7 +27,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int mtk_pll_early_init(void)
+static int mtk_pll_early_init(void)
 {
 	unsigned long pll_rates[] = {
 		[CLK_APMIXED_ARMPLL] = 1250000000,

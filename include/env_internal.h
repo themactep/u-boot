@@ -15,8 +15,6 @@
 #ifndef _ENV_INTERNAL_H_
 #define _ENV_INTERNAL_H_
 
-#include <linux/kconfig.h>
-
 /**************************************************************************
  *
  * The "environment" is stored as a list of '\0' terminated
@@ -55,7 +53,7 @@ extern unsigned long nand_env_oob_offset;
 
 #include "compiler.h"
 
-#ifdef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+#ifdef CONFIG_ENV_REDUNDANT
 # define ENV_HEADER_SIZE	(sizeof(uint32_t) + 1)
 #else
 # define ENV_HEADER_SIZE	(sizeof(uint32_t))
@@ -79,7 +77,7 @@ extern unsigned long nand_env_oob_offset;
 
 typedef struct environment_s {
 	uint32_t	crc;		/* CRC32 over data bytes	*/
-#ifdef CONFIG_SYS_REDUNDAND_ENVIRONMENT
+#ifdef CONFIG_ENV_REDUNDANT
 	unsigned char	flags;		/* active/obsolete flags ENVF_REDUND_ */
 #endif
 	unsigned char	data[ENV_SIZE]; /* Environment data		*/
@@ -102,6 +100,7 @@ extern const char default_environment[];
 #include <env_flags.h>
 #include <search.h>
 
+/* this is stored as bits in gd->env_has_init so is limited to 16 entries */
 enum env_location {
 	ENVL_UNKNOWN,
 	ENVL_EEPROM,
@@ -114,7 +113,9 @@ enum env_location {
 	ENVL_ONENAND,
 	ENVL_REMOTE,
 	ENVL_SPI_FLASH,
+	ENVL_MTD,
 	ENVL_UBI,
+	ENVL_SCSI,
 	ENVL_NOWHERE,
 
 	ENVL_COUNT,
@@ -192,6 +193,18 @@ struct env_driver {
 #define ENV_ERASE_PTR(x) (IS_ENABLED(CONFIG_CMD_ERASEENV) ? (x) : NULL)
 
 extern struct hsearch_data env_htab;
+
+/**
+ * env_do_env_set() - Perform the actual setting of an environment variable
+ *
+ * Due to the number of places we may need to set an environmental variable
+ * from we have an exposed internal function that performs the real work and
+ * then call this from both the command line function as well as other
+ * locations.
+ *
+ * Return: 0 on success or 1 on failure
+ */
+int env_do_env_set(int flag, int argc, char *const argv[], int env_flag);
 
 /**
  * env_ext4_get_intf() - Provide the interface for env in EXT4

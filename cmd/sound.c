@@ -4,14 +4,10 @@
  * Rajeshwari Shinde <rajeshwari.s@samsung.com>
  */
 
-#include <common.h>
 #include <command.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <sound.h>
-#include <asm/global_data.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* Initilaise sound subsystem */
 static int do_init(struct cmd_tbl *cmdtp, int flag, int argc,
@@ -99,7 +95,7 @@ U_BOOT_CMD(
 	sound, INT_MAX, 1, do_sound,
 	"sound sub-system",
 	"init - initialise the sound driver\n"
-	"sound play [[[-q|-s] len [freq]] ...] - play sounds\n"
+	"sound play [len [freq [len [freq ...]]]] - play sounds\n"
 	"  len - duration in ms\n"
 	"  freq - frequency in Hz\n"
 );

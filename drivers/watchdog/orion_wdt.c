@@ -12,19 +12,15 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <common.h>
 #include <dm.h>
 #include <clk.h>
 #include <log.h>
 #include <wdt.h>
-#include <asm/global_data.h>
 #include <linux/bitops.h>
 #include <linux/kernel.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/soc.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct orion_wdt_priv {
 	void __iomem *reg;

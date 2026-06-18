@@ -3,7 +3,6 @@
  * Copyright (c) 2019, Linaro Limited
  */
 
-#include <common.h>
 #include <dm.h>
 #include <log.h>
 #include <rng.h>
@@ -47,7 +46,7 @@ static int virtio_rng_read(struct udevice *dev, void *data, size_t len)
 			;
 
 		if (rsize > sg.length)
-			return -EIO;
+			rsize = sg.length;
 
 		memcpy(ptr, buf, rsize);
 		len -= rsize;

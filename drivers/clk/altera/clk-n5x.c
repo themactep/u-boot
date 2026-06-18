@@ -3,17 +3,13 @@
  * Copyright (C) 2020-2022 Intel Corporation <www.intel.com>
  */
 
-#include <common.h>
 #include <asm/arch/clock_manager.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <clk-uclass.h>
 #include <dm.h>
 #include <dm/lists.h>
 #include <dm/util.h>
 #include <dt-bindings/clock/n5x-clock.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct socfpga_clk_plat {
 	void __iomem *regs;
@@ -53,7 +49,7 @@ static void clk_basic_init(struct udevice *dev,
 	if (!cfg)
 		return;
 
-#if IS_ENABLED(CONFIG_SPL_BUILD)
+#if IS_ENABLED(CONFIG_XPL_BUILD)
 	/* Always force clock manager into boot mode before any configuration */
 	clk_write_ctrl(plat,
 		       CM_REG_READL(plat, CLKMGR_CTRL) | CLKMGR_CTRL_BOOTMODE);
@@ -387,8 +383,8 @@ static u32 clk_get_emac_clk_hz(struct socfpga_clk_plat *plat, u32 emac_id)
 		} else {
 			clock /= 1 + ((CM_REG_READL(plat,
 				       CLKMGR_PERPLL_PLLOUTDIV) &
-				       CLKMGR_PLLOUTDIV_C3CNT_MASK >>
-				       CLKMGR_PLLOUTDIV_C3CNT_OFFSET));
+				       CLKMGR_PLLOUTDIV_C3CNT_MASK) >>
+				       CLKMGR_PLLOUTDIV_C3CNT_OFFSET);
 		}
 		break;
 

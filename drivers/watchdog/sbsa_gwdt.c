@@ -5,9 +5,7 @@
  * Copyright 2020 NXP
  */
 
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <common.h>
 #include <dm/device.h>
 #include <dm/fdtaddr.h>
 #include <dm/read.h>
@@ -15,8 +13,6 @@
 #include <linux/err.h>
 #include <watchdog.h>
 #include <wdt.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* SBSA Generic Watchdog register definitions */
 /* refresh frame */

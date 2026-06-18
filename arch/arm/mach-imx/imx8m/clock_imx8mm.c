@@ -5,19 +5,15 @@
  * Peng Fan <peng.fan@nxp.com>
  */
 
-#include <common.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <div64.h>
 #include <errno.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <phy.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static struct anamix_pll *ana_pll = (struct anamix_pll *)ANATOP_BASE_ADDR;
 
@@ -52,20 +48,20 @@ int enable_i2c_clk(unsigned char enable, unsigned i2c_num)
 	return 0;
 }
 
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_XPL_BUILD
 static struct imx_int_pll_rate_table imx8mm_fracpll_tbl[] = {
 	PLL_1443X_RATE(1000000000U, 250, 3, 1, 0),
 	PLL_1443X_RATE(933000000U, 311, 4, 1, 0),
-	PLL_1443X_RATE(900000000U, 300, 8, 0, 0),
-	PLL_1443X_RATE(800000000U, 300, 9, 0, 0),
-	PLL_1443X_RATE(750000000U, 250, 8, 0, 0),
+	PLL_1443X_RATE(900000000U, 300, 2, 2, 0),
+	PLL_1443X_RATE(800000000U, 200, 3, 1, 0),
+	PLL_1443X_RATE(750000000U, 250, 2, 2, 0),
 	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),
 	PLL_1443X_RATE(600000000U, 300, 3, 2, 0),
 	PLL_1443X_RATE(594000000U, 99, 1, 2, 0),
-	PLL_1443X_RATE(400000000U, 300, 9, 1, 0),
-	PLL_1443X_RATE(266000000U, 400, 9, 2, 0),
+	PLL_1443X_RATE(400000000U, 400, 3, 3, 0),
+	PLL_1443X_RATE(266000000U, 266, 3, 3, 0),
 	PLL_1443X_RATE(167000000U, 334, 3, 4, 0),
-	PLL_1443X_RATE(100000000U, 300, 9, 3, 0),
+	PLL_1443X_RATE(100000000U, 200, 3, 4, 0),
 };
 
 static int fracpll_configure(enum pll_clocks pll, u32 freq)
@@ -182,10 +178,19 @@ void dram_disable_bypass(void)
 }
 #endif
 
-int intpll_configure(enum pll_clocks pll, ulong freq)
+__weak int board_imx_intpll_override(enum pll_clocks pll, ulong *freq)
+{
+	return 0;
+}
+
+static int intpll_configure(enum pll_clocks pll, ulong freq)
 {
 	void __iomem *pll_gnrl_ctl, __iomem *pll_div_ctl;
 	u32 pll_div_ctl_val, pll_clke_masks;
+	int ret = board_imx_intpll_override(pll, &freq);
+
+	if (ret)
+		return ret;
 
 	switch (pll) {
 	case ANATOP_SYSTEM_PLL1:
@@ -903,6 +908,13 @@ static int imx8mp_fec_interface_init(struct udevice *dev,
 		return -EINVAL;
 	}
 
+	return 0;
+}
+#else
+static int imx8mp_fec_interface_init(struct udevice *dev,
+				     phy_interface_t interface_type,
+				     bool mx8mp)
+{
 	return 0;
 }
 #endif

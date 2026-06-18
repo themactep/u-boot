@@ -3,19 +3,15 @@
  * Copyright (c) 2013 Google, Inc
  */
 
-#include <common.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <log.h>
 #include <video.h>
-#include <asm/global_data.h>
 #include <asm/sdl.h>
 #include <asm/state.h>
 #include <asm/u-boot-sandbox.h>
 #include <dm/device-internal.h>
 #include <dm/test.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 enum {
 	/* Default LCD size we support */

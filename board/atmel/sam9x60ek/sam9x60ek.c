@@ -5,7 +5,7 @@
  * Author: Sandeep Sheriker M <sandeep.sheriker@microchip.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <init.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
@@ -46,13 +46,6 @@ int board_late_init(void)
 void board_debug_uart_init(void)
 {
 	at91_seriald_hw_init();
-}
-#endif
-
-#ifdef CONFIG_BOARD_EARLY_INIT_F
-int board_early_init_f(void)
-{
-	return 0;
 }
 #endif
 

@@ -4,7 +4,6 @@
  * Author: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
  */
 
-#include <common.h>
 #include <cpu_func.h>
 #include <dm.h>
 #include <errno.h>
@@ -60,11 +59,6 @@ static struct mm_region hikey_mem_map[] = {
 };
 
 struct mm_region *mem_map = hikey_mem_map;
-
-int board_early_init_f(void)
-{
-	return 0;
-}
 
 int misc_init_r(void)
 {

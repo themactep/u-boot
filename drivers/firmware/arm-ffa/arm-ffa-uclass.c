@@ -5,22 +5,18 @@
  * Authors:
  *   Abdellatif El Khlifi <abdellatif.elkhlifi@arm.com>
  */
-#include <common.h>
 #include <arm_ffa.h>
 #include <arm_ffa_priv.h>
 #include <dm.h>
 #include <log.h>
 #include <malloc.h>
 #include <string.h>
-#include <uuid.h>
-#include <asm/global_data.h>
+#include <u-boot/uuid.h>
 #include <dm/device-internal.h>
 #include <dm/devres.h>
 #include <dm/root.h>
 #include <linux/errno.h>
 #include <linux/sizes.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* Error mapping declarations */
 

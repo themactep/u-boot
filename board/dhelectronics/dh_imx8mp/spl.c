@@ -3,7 +3,6 @@
  * Copyright 2022 Marek Vasut <marex@denx.de>
  */
 
-#include <common.h>
 #include <hang.h>
 #include <image.h>
 #include <init.h>
@@ -11,6 +10,7 @@
 #include <asm/io.h>
 #include <asm-generic/gpio.h>
 #include <asm/arch/clock.h>
+#include <asm/arch/ddr.h>
 #include <asm/arch/imx8mp_pins.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
@@ -28,8 +28,6 @@
 #include <power/pca9450.h>
 
 #include "lpddr4_timing.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
 #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
@@ -94,6 +92,11 @@ static int dh_imx8mp_board_power_init(void)
 	/* To avoid timing risk from SoC to ARM, increase VDD_ARM to OD voltage 0.95V */
 	pmic_reg_write(dev, PCA9450_BUCK2OUT_DVS0, 0x1c);
 
+	/* DRAM Vdd1 always FPWM */
+	pmic_reg_write(dev, PCA9450_BUCK5CTRL, 0x0d);
+	/* DRAM Vdd2/Vddq always FPWM */
+	pmic_reg_write(dev, PCA9450_BUCK6CTRL, 0x0d);
+
 	/* Set LDO4 and CONFIG2 to enable the I2C level translator. */
 	pmic_reg_write(dev, PCA9450_LDO4CTRL, 0x59);
 	pmic_reg_write(dev, PCA9450_CONFIG2, 0x1);
@@ -101,35 +104,90 @@ static int dh_imx8mp_board_power_init(void)
 	return 0;
 }
 
-static struct dram_timing_info *dram_timing_info[8] = {
-	NULL,					/* 512 MiB */
-	NULL,					/* 1024 MiB */
-	NULL,					/* 1536 MiB */
-	&dh_imx8mp_dhcom_dram_timing_16g_x32,	/* 2048 MiB */
-	NULL,					/* 3072 MiB */
-	&dh_imx8mp_dhcom_dram_timing_32g_x32,	/* 4096 MiB */
-	NULL,					/* 6144 MiB */
-	NULL,					/* 8192 MiB */
+typedef void (*patch_func_t)(void);
+
+static const patch_func_t dram_patch_fn[8] = {
+	dh_imx8mp_dhcom_dram_patch_16g_x32_to_32g_x32_1r,	/* 4096 MiB 1-rank */
+	NULL,							/* 1024 MiB */
+	NULL,							/* 1536 MiB */
+	dh_imx8mp_dhcom_dram_patch_16g_x32_to_16g_x32,		/* 2048 MiB */
+	NULL,							/* 3072 MiB */
+	dh_imx8mp_dhcom_dram_patch_16g_x32_to_32g_x32_2r,	/* 4096 MiB 2-rank */
+	NULL,							/* 6144 MiB */
+	NULL,							/* 8192 MiB */
 };
 
 static void spl_dram_init(void)
 {
-	const u16 size[] = { 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192 };
 	u8 memcfg = dh_get_memcfg();
 	int i;
 
-	printf("DDR:   %d MiB [0x%x]\n", size[memcfg], memcfg);
+	printf("DDR:   %d MiB [0x%x]\n", dh_imx8mp_dhcom_dram_size[memcfg], memcfg);
 
-	if (!dram_timing_info[memcfg]) {
+	if (!dram_patch_fn[memcfg]) {
 		printf("Unsupported DRAM strapping, trying lowest supported. MEMCFG=0x%x\n",
 		       memcfg);
-		for (i = 0; i < ARRAY_SIZE(dram_timing_info); i++)
-			if (dram_timing_info[i])	/* Configuration found */
+		for (i = 0; i < ARRAY_SIZE(dram_patch_fn); i++)
+			if (dram_patch_fn[i])	/* Configuration found */
 				break;
 	}
 
-	ddr_init(dram_timing_info[memcfg]);
+	dram_patch_fn[memcfg]();
+	ddr_init(dh_imx8mp_dhcom_dram_timing);
+
+	printf("DDR:   Inline ECC %sabled\n",
+	       (readl(DDRC_ECCCFG0(0)) & DDRC_ECCCFG0_ECC_MODE_MASK) ?
+	       "en" : "dis");
 }
+
+#if IS_ENABLED(CONFIG_IMX8M_DRAM_INLINE_ECC)
+static void dh_imx8mp_dhcom_dram_scrub_16g_x32(void)
+{
+	ddrc_inline_ecc_scrub(0x0,0x3ffffff);
+	ddrc_inline_ecc_scrub(0x4000000,0x7ffffff);
+	ddrc_inline_ecc_scrub(0x8000000,0xbffffff);
+	ddrc_inline_ecc_scrub(0xc000000,0xfffffff);
+	ddrc_inline_ecc_scrub(0x10000000,0x13ffffff);
+	ddrc_inline_ecc_scrub(0x14000000,0x17ffffff);
+	ddrc_inline_ecc_scrub(0x18000000,0x1bffffff);
+	ddrc_inline_ecc_scrub_end(0x0,0x1fffffff);
+}
+
+static void dh_imx8mp_dhcom_dram_scrub_32g_x32(void)
+{
+	ddrc_inline_ecc_scrub(0x0,0x7ffffff);
+	ddrc_inline_ecc_scrub(0x8000000,0xfffffff);
+	ddrc_inline_ecc_scrub(0x10000000,0x17ffffff);
+	ddrc_inline_ecc_scrub(0x18000000,0x1fffffff);
+	ddrc_inline_ecc_scrub(0x20000000,0x27ffffff);
+	ddrc_inline_ecc_scrub(0x28000000,0x2fffffff);
+	ddrc_inline_ecc_scrub(0x30000000,0x37ffffff);
+	ddrc_inline_ecc_scrub_end(0x0,0x3fffffff);
+}
+
+typedef void (*scrub_func_t)(void);
+
+static const scrub_func_t dram_scrub_fn[8] = {
+	dh_imx8mp_dhcom_dram_scrub_32g_x32,	/* 4096 MiB 1-rank */
+	NULL,					/* 1024 MiB */
+	NULL,					/* 1536 MiB */
+	dh_imx8mp_dhcom_dram_scrub_16g_x32,	/* 2048 MiB */
+	NULL,					/* 3072 MiB */
+	dh_imx8mp_dhcom_dram_scrub_32g_x32,	/* 4096 MiB 2-rank */
+	NULL,					/* 6144 MiB */
+	NULL,					/* 8192 MiB */
+};
+
+void board_dram_ecc_scrub(void)
+{
+	u8 memcfg = dh_get_memcfg();
+
+	if (!dram_scrub_fn[memcfg])
+		return;
+
+	dram_scrub_fn[memcfg]();
+}
+#endif
 
 void spl_board_init(void)
 {

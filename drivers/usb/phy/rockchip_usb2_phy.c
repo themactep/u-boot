@@ -3,17 +3,13 @@
  * Copyright 2016 Rockchip Electronics Co., Ltd
  */
 
-#include <common.h>
 #include <hang.h>
 #include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 
 #include "../gadget/dwc2_udc_otg_priv.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define BIT_WRITEABLE_SHIFT	16
 
@@ -72,7 +68,6 @@ static void property_enable(struct dwc2_plat_otg_data *pdata,
 
 	writel(val, pdata->regs_phy + reg->offset);
 }
-
 
 void otg_phy_init(struct dwc2_udc *dev)
 {

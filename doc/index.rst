@@ -15,6 +15,16 @@ if you want to help out.
 .. toctree::
    :maxdepth: 2
 
+Contributing Guidelines
+-----------------------
+
+General guidelines for contributing to the U-Boot project.
+
+.. toctree::
+   :maxdepth: 2
+
+   CONTRIBUTE
+
 User-oriented documentation
 ---------------------------
 
@@ -99,4 +109,7 @@ Chromium OS-specific doc
 Indices and tables
 ==================
 
-* :ref:`genindex`
+.. toctree::
+   :maxdepth: 1
+
+   genindex

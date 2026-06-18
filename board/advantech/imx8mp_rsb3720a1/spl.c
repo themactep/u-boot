@@ -4,7 +4,7 @@
  * Copyright 2022 Linaro
  */
 
-#include <common.h>
+#include <config.h>
 #include <command.h>
 #include <cpu_func.h>
 #include <errno.h>
@@ -28,8 +28,6 @@
 #include <linux/delay.h>
 #include <power/pmic.h>
 #include <power/pca9450.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {

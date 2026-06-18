@@ -3,16 +3,12 @@
  * Copyright 2019 NXP
  */
 
-#include <common.h>
 #include <console.h>
 #include <errno.h>
 #include <fuse.h>
 #include <firmware/imx/sci/sci.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/global_data.h>
 #include <linux/arm-smccc.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define FSL_ECC_WORD_START_1	 0x10
 #define FSL_ECC_WORD_END_1	 0x10F

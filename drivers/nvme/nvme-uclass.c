@@ -6,7 +6,6 @@
 
 #define LOG_CATEGORY UCLASS_NVME
 
-#include <common.h>
 #include <bootdev.h>
 #include <dm.h>
 #include <init.h>
@@ -45,7 +44,7 @@ UCLASS_DRIVER(nvme) = {
 	.id	= UCLASS_NVME,
 };
 
-struct bootdev_ops nvme_bootdev_ops = {
+static const struct bootdev_ops nvme_bootdev_ops = {
 };
 
 static const struct udevice_id nvme_bootdev_ids[] = {

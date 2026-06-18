@@ -4,20 +4,23 @@
  * Michal Simek <michal.simek@amd.com>
  */
 
-#include <common.h>
+#include <config.h>
 #include <command.h>
 #include <cpu_func.h>
 #include <debug_uart.h>
 #include <dfu.h>
 #include <env.h>
 #include <env_internal.h>
+#include <efi_loader.h>
 #include <init.h>
 #include <log.h>
+#include <mtd.h>
 #include <net.h>
 #include <sata.h>
 #include <ahci.h>
 #include <scsi.h>
 #include <soc.h>
+#include <spl.h>
 #include <malloc.h>
 #include <memalign.h>
 #include <wdt.h>
@@ -71,13 +74,21 @@ int __maybe_unused psu_uboot_init(void)
 	writel(ZYNQMP_PS_SYSMON_ANALOG_BUS_VAL,
 	       ZYNQMP_AMS_PS_SYSMON_ANALOG_BUS);
 
+	/* Disable secure access for boot devices */
+	writel(0x04920492, ZYNQMP_IOU_SECURE_SLCR);
+	writel(0x00920492, ZYNQMP_IOU_SECURE_SLCR + 4);
+
+	/* Enable CCI PMU events */
+	writel(ZYNQMP_CCI_REG_CCI_MISC_CTRL_NIDEN,
+	       ZYNQMP_CCI_REG_CCI_MISC_CTRL);
+
 	/* Delay is required for clocks to be propagated */
 	udelay(1000000);
 	
 	return 0;
 }
 
-#if !defined(CONFIG_SPL_BUILD)
+#if !defined(CONFIG_XPL_BUILD)
 # if defined(CONFIG_DEBUG_UART_BOARD_INIT)
 void board_debug_uart_init(void)
 {
@@ -111,7 +122,7 @@ static int multi_boot(void)
 	return multiboot;
 }
 
-#if defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_XPL_BUILD)
 static void restore_jtag(void)
 {
 	if (current_el() != 3)
@@ -146,22 +157,12 @@ int board_init(void)
 	int ret;
 #endif
 
-#if defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_XPL_BUILD)
 	/* Check *at build time* if the filename is an non-empty string */
 	if (sizeof(CONFIG_ZYNQMP_SPL_PM_CFG_OBJ_FILE) > 1)
 		zynqmp_pmufw_load_config_object(zynqmp_pm_cfg_obj,
 						zynqmp_pm_cfg_obj_size);
-#endif
 
-#if defined(CONFIG_ZYNQMP_FIRMWARE)
-	struct udevice *dev;
-
-	uclass_get_device_by_name(UCLASS_FIRMWARE, "zynqmp-power", &dev);
-	if (!dev)
-		panic("PMU Firmware device not found - Enable it");
-#endif
-
-#if defined(CONFIG_SPL_BUILD)
 	printf("Silicon version:\t%d\n", zynqmp_get_silicon_version());
 
 	/* the CSU disables the JTAG interface when secure boot is enabled */
@@ -182,6 +183,23 @@ int board_init(void)
 			zynqmppl.name = strdup(name);
 			fpga_init();
 			fpga_add(fpga_xilinx, &zynqmppl);
+
+			/*
+			 * zu63dr_SE and zu67dr_SE share ID 0x046D7093.
+			 * Register zu63dr_SE as alternate device.
+			 */
+			if (!strcmp(name, "zu67dr_SE")) {
+				xilinx_desc *alt;
+
+				alt = calloc(1, sizeof(*alt));
+				if (!alt) {
+					log_err("Failed to allocate alt FPGA descriptor\n");
+				} else {
+					*alt = zynqmppl;
+					alt->name = "zu63dr_SE";
+					fpga_add(fpga_xilinx, alt);
+				}
+			}
 		}
 	}
 #endif
@@ -281,6 +299,18 @@ int dram_init(void)
 #if !CONFIG_IS_ENABLED(SYSRESET)
 void reset_cpu(void)
 {
+	if (!IS_ENABLED(CONFIG_ZYNQMP_FIRMWARE)) {
+		log_warning("reset failed: ZYNQMP_FIRMWARE disabled");
+		return;
+	}
+
+	/* In case of !CONFIG_ZYNQMP_FIRMWARE the call to 'xilinx_pm_request()'
+	 * will be removed by the compiler due to the early return.
+	 * If CONFIG_ZYNQMP_FIRMWARE is defined in SPL 'xilinx_pm_request()'
+	 * will send command over IPI and requires pmufw to be present.
+	 */
+	xilinx_pm_request(PM_RESET_ASSERT, ZYNQMP_PM_RESET_SOFT,
+			  PM_RESET_ACTION_ASSERT, 0, 0, 0, 0, NULL);
 }
 #endif
 
@@ -477,7 +507,7 @@ static int boot_targets_setup(void)
 		if (bootseq >= 0) {
 			bootseq_len = snprintf(NULL, 0, "%i", bootseq);
 			debug("Bootseq len: %x\n", bootseq_len);
-			env_set_hex("bootseq", bootseq);
+			env_set_ulong("bootseq", (unsigned long)bootseq);
 		}
 
 		/*
@@ -515,6 +545,13 @@ int board_late_init(void)
 	usb_ether_init();
 #endif
 
+	if (IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT))
+		configure_capsule_updates();
+
+	multiboot = multi_boot();
+	if (multiboot >= 0)
+		env_set_hex("multiboot", multiboot);
+
 	if (!(gd->flags & GD_FLG_ENV_DEFAULT)) {
 		debug("Saved variables - Skipping\n");
 		return 0;
@@ -526,10 +563,6 @@ int board_late_init(void)
 	ret = set_fdtfile();
 	if (ret)
 		return ret;
-
-	multiboot = multi_boot();
-	if (multiboot >= 0)
-		env_set_hex("multiboot", multiboot);
 
 	if (IS_ENABLED(CONFIG_DISTRO_DEFAULTS)) {
 		ret = boot_targets_setup();
@@ -584,6 +617,7 @@ int mmc_get_env_dev(void)
 	return bootseq;
 }
 
+#if defined(CONFIG_ENV_IS_NOWHERE)
 enum env_location env_get_location(enum env_operation op, int prio)
 {
 	u32 bootmode = zynqmp_get_bootmode();
@@ -611,27 +645,52 @@ enum env_location env_get_location(enum env_operation op, int prio)
 	case QSPI_MODE_32BIT:
 		if (IS_ENABLED(CONFIG_ENV_IS_IN_SPI_FLASH))
 			return ENVL_SPI_FLASH;
+		if (IS_ENABLED(CONFIG_ENV_IS_IN_FAT))
+			return ENVL_FAT;
+		if (IS_ENABLED(CONFIG_ENV_IS_IN_EXT4))
+			return ENVL_EXT4;
 		return ENVL_NOWHERE;
 	case JTAG_MODE:
 	default:
 		return ENVL_NOWHERE;
 	}
 }
-
-#if defined(CONFIG_SET_DFU_ALT_INFO)
+#endif
 
 #define DFU_ALT_BUF_LEN		SZ_1K
 
-void set_dfu_alt_info(char *interface, char *devstr)
+static void mtd_found_part(u32 *base, u32 *size)
+{
+	struct mtd_info *part, *mtd;
+
+	mtd_probe_devices();
+
+	mtd = get_mtd_device_nm("nor0");
+	if (!IS_ERR_OR_NULL(mtd)) {
+		list_for_each_entry(part, &mtd->partitions, node) {
+			debug("0x%012llx-0x%012llx : \"%s\"\n",
+			      part->offset, part->offset + part->size,
+			      part->name);
+
+			if (*base >= part->offset &&
+			    *base < part->offset + part->size) {
+				debug("Found my partition: %d/%s\n",
+				      part->index, part->name);
+				*base = part->offset;
+				*size = part->size;
+				break;
+			}
+		}
+	}
+}
+
+void configure_capsule_updates(void)
 {
 	int multiboot, bootseq = 0, len = 0;
 
 	ALLOC_CACHE_ALIGN_BUFFER(char, buf, DFU_ALT_BUF_LEN);
 
-	if (env_get("dfu_alt_info"))
-		return;
-
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, DFU_ALT_BUF_LEN);
 
 	multiboot = multi_boot();
 	if (multiboot < 0)
@@ -657,27 +716,58 @@ void set_dfu_alt_info(char *interface, char *devstr)
 		len += snprintf(buf + len, DFU_ALT_BUF_LEN, ".bin fat %d 1",
 			       bootseq);
 #if defined(CONFIG_SPL_FS_LOAD_PAYLOAD_NAME)
-		len += snprintf(buf + len, DFU_ALT_BUF_LEN, ";%s fat %d 1",
-			       CONFIG_SPL_FS_LOAD_PAYLOAD_NAME, bootseq);
+		if (strlen(CONFIG_SPL_FS_LOAD_PAYLOAD_NAME))
+			len += snprintf(buf + len, DFU_ALT_BUF_LEN,
+					";%s fat %d 1",
+					CONFIG_SPL_FS_LOAD_PAYLOAD_NAME,
+					bootseq);
 #endif
 		break;
 	case QSPI_MODE_24BIT:
 	case QSPI_MODE_32BIT:
-		len += snprintf(buf + len, DFU_ALT_BUF_LEN,
-			       "sf 0:0=boot.bin raw %x 0x1500000",
-			       multiboot * SZ_32K);
-#if defined(CONFIG_SPL_FS_LOAD_PAYLOAD_NAME) && defined(CONFIG_SYS_SPI_U_BOOT_OFFS)
-		len += snprintf(buf + len, DFU_ALT_BUF_LEN,
-			       ";%s raw 0x%x 0x500000",
-			       CONFIG_SPL_FS_LOAD_PAYLOAD_NAME,
-			       CONFIG_SYS_SPI_U_BOOT_OFFS);
+		{
+			u32 base = multiboot * SZ_32K;
+			u32 size = 0x1500000;
+			u32 limit = size;
+
+			mtd_found_part(&base, &limit);
+
+#if defined(CONFIG_SYS_SPI_U_BOOT_OFFS)
+			size = limit;
+			limit = CONFIG_SYS_SPI_U_BOOT_OFFS;
 #endif
+
+			len += snprintf(buf + len, DFU_ALT_BUF_LEN,
+					"sf 0:0=boot.bin raw 0x%x 0x%x",
+					base, limit);
+#if defined(CONFIG_SPL_FS_LOAD_PAYLOAD_NAME) && defined(CONFIG_SYS_SPI_U_BOOT_OFFS)
+			if (strlen(CONFIG_SPL_FS_LOAD_PAYLOAD_NAME))
+				len += snprintf(buf + len, DFU_ALT_BUF_LEN,
+						";%s raw 0x%x 0x%x",
+						CONFIG_SPL_FS_LOAD_PAYLOAD_NAME,
+						base + limit, size - limit);
+#endif
+		}
 		break;
 	default:
 		return;
 	}
 
-	env_set("dfu_alt_info", buf);
-	puts("DFU alt info setting: done\n");
+	update_info.dfu_string = strdup(buf);
+	debug("Capsule DFU: %s\n", update_info.dfu_string);
+}
+
+#if defined(CONFIG_SPL_SPI_LOAD)
+unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
+{
+	u32 offset;
+	int multiboot = multi_boot();
+
+	offset = multiboot * SZ_32K;
+	offset += CONFIG_SYS_SPI_U_BOOT_OFFS;
+
+	log_info("SPI offset:\t0x%x\n", offset);
+
+	return offset;
 }
 #endif

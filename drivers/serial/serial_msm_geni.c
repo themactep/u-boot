@@ -9,23 +9,22 @@
 
 #include <asm/io.h>
 #include <clk.h>
-#include <common.h>
 #include <dm.h>
+#include <dm/device_compat.h>
 #include <errno.h>
 #include <linux/delay.h>
+#include <linux/time.h>
 #include <misc.h>
 #include <serial.h>
+#include <soc/qcom/qup-fw-load.h>
+#include <soc/qcom/geni-se.h>
 
 #define UART_OVERSAMPLING	32
 #define STALE_TIMEOUT	160
 
-#define USEC_PER_SEC	1000000L
-
 /* Registers*/
 #define GENI_FORCE_DEFAULT_REG	0x20
 #define GENI_SER_M_CLK_CFG	0x48
-#define GENI_SER_S_CLK_CFG	0x4C
-#define SE_HW_PARAM_0	0xE24
 #define SE_GENI_STATUS	0x40
 #define SE_GENI_S_CMD0	0x630
 #define SE_GENI_S_CMD_CTRL_REG	0x634
@@ -41,7 +40,6 @@
 #define SE_GENI_RX_FIFOn	0x780
 #define SE_GENI_TX_FIFO_STATUS	0x800
 #define SE_GENI_RX_FIFO_STATUS	0x804
-#define SE_GENI_TX_WATERMARK_REG	0x80C
 #define SE_GENI_TX_PACKING_CFG0	0x260
 #define SE_GENI_TX_PACKING_CFG1	0x264
 #define SE_GENI_RX_PACKING_CFG0	0x284
@@ -56,59 +54,24 @@
 #define SE_UART_RX_TRANS_CFG	0x280
 #define SE_UART_RX_PARITY_CFG	0x2a8
 
-#define M_TX_FIFO_WATERMARK_EN	(BIT(30))
 #define DEF_TX_WM	2
 /* GENI_FORCE_DEFAULT_REG fields */
-#define FORCE_DEFAULT	(BIT(0))
-
-#define S_CMD_ABORT_EN	(BIT(5))
 
 #define UART_START_READ	0x1
 
-/* GENI_M_CMD_CTRL_REG */
-#define M_GENI_CMD_CANCEL	(BIT(2))
-#define M_GENI_CMD_ABORT	(BIT(1))
-#define M_GENI_DISABLE	(BIT(0))
-
-#define M_CMD_ABORT_EN	(BIT(5))
-#define M_CMD_DONE_EN	(BIT(0))
 #define M_CMD_DONE_DISABLE_MASK	(~M_CMD_DONE_EN)
-
-#define S_GENI_CMD_ABORT	(BIT(1))
-
-/* GENI_S_CMD0 fields */
-#define S_OPCODE_MSK	(GENMASK(31, 27))
-#define S_PARAMS_MSK	(GENMASK(26, 0))
-
-/* GENI_STATUS fields */
-#define M_GENI_CMD_ACTIVE	(BIT(0))
-#define S_GENI_CMD_ACTIVE	(BIT(12))
-#define M_CMD_DONE_EN	(BIT(0))
-#define S_CMD_DONE_EN	(BIT(0))
 
 #define M_OPCODE_SHIFT	27
 #define S_OPCODE_SHIFT	27
-#define M_TX_FIFO_WATERMARK_EN	(BIT(30))
 #define UART_START_TX	0x1
 #define UART_CTS_MASK	(BIT(1))
-#define M_SEC_IRQ_EN	(BIT(31))
 #define TX_FIFO_WC_MSK	(GENMASK(27, 0))
-#define RX_FIFO_WC_MSK	(GENMASK(24, 0))
-
-#define S_RX_FIFO_WATERMARK_EN	(BIT(26))
-#define S_RX_FIFO_LAST_EN	(BIT(27))
-#define M_RX_FIFO_WATERMARK_EN	(BIT(26))
-#define M_RX_FIFO_LAST_EN	(BIT(27))
 
 /* GENI_SER_M_CLK_CFG/GENI_SER_S_CLK_CFG */
-#define SER_CLK_EN	(BIT(0))
-#define CLK_DIV_MSK	(GENMASK(15, 4))
 #define CLK_DIV_SHFT	4
 
 /* SE_HW_PARAM_0 fields */
-#define TX_FIFO_WIDTH_MSK	(GENMASK(29, 24))
 #define TX_FIFO_WIDTH_SHFT	24
-#define TX_FIFO_DEPTH_MSK	(GENMASK(21, 16))
 #define TX_FIFO_DEPTH_SHFT	16
 
 /* GENI SE QUP Registers */
@@ -133,6 +96,7 @@ struct msm_serial_data {
 	phys_addr_t base;
 	u32 baud;
 	u32 oversampling;
+	struct clk *se;
 };
 
 unsigned long root_freq[] = {7372800,  14745600, 19200000, 29491200,
@@ -181,19 +145,6 @@ static int get_clk_div_rate(u32 baud, u64 sampling_rate, u32 *clk_div)
 
 	*clk_div = ser_clk / desired_clk;
 	return ser_clk;
-}
-
-static int geni_serial_set_clock_rate(struct udevice *dev, u64 rate)
-{
-	struct clk *clk;
-	int ret;
-
-	clk = devm_clk_get(dev, NULL);
-	if (!clk)
-		return -EINVAL;
-
-	ret = clk_set_rate(clk, rate);
-	return ret;
 }
 
 /**
@@ -249,11 +200,20 @@ static int msm_serial_setbrg(struct udevice *dev, int baud)
 	struct msm_serial_data *priv = dev_get_priv(dev);
 	u64 clk_rate;
 	u32 clk_div;
+	int ret;
 
 	priv->baud = baud;
 
 	clk_rate = get_clk_div_rate(baud, priv->oversampling, &clk_div);
-	geni_serial_set_clock_rate(dev, clk_rate);
+	if (!clk_rate) {
+		pr_err("%s: Couldn't get clock division rate\n", __func__);
+		return -EINVAL;
+	}
+	ret = clk_set_rate(priv->se, clk_rate);
+	if (ret < 0) {
+		pr_err("%s: Couldn't set clock rate: %d\n", __func__, ret);
+		return 0;
+	}
 	geni_serial_baud(priv->base, clk_div, baud);
 
 	return 0;
@@ -281,23 +241,19 @@ static bool qcom_geni_serial_poll_bit(const struct udevice *dev, int offset,
 	unsigned int tx_fifo_depth;
 	unsigned int tx_fifo_width;
 	unsigned int fifo_bits;
-	unsigned long timeout_us = 10000;
+	unsigned long timeout_us;
 
-	baud = 115200;
-
-	if (priv) {
-		baud = priv->baud;
-		if (!baud)
-			baud = 115200;
-		tx_fifo_depth = geni_se_get_tx_fifo_depth(priv->base);
-		tx_fifo_width = geni_se_get_tx_fifo_width(priv->base);
-		fifo_bits = tx_fifo_depth * tx_fifo_width;
-		/*
-		 * Total polling iterations based on FIFO worth of bytes to be
-		 * sent at current baud. Add a little fluff to the wait.
-		 */
-		timeout_us = ((fifo_bits * USEC_PER_SEC) / baud) + 500;
-	}
+	baud = priv->baud;
+	if (!baud)
+		baud = 115200;
+	tx_fifo_depth = geni_se_get_tx_fifo_depth(priv->base);
+	tx_fifo_width = geni_se_get_tx_fifo_width(priv->base);
+	fifo_bits = tx_fifo_depth * tx_fifo_width;
+	/*
+	 * Total polling iterations based on FIFO worth of bytes to be
+	 * sent at current baud. Add a little fluff to the wait.
+	 */
+	timeout_us = ((fifo_bits * USEC_PER_SEC) / baud) + 500;
 
 	timeout_us = DIV_ROUND_UP(timeout_us, 10) * 10;
 	while (timeout_us) {
@@ -486,12 +442,12 @@ static const struct dm_serial_ops msm_serial_ops = {
 	.setbrg = msm_serial_setbrg,
 };
 
-static void geni_set_oversampling(struct udevice *dev)
+static int geni_set_oversampling(struct udevice *dev)
 {
 	struct msm_serial_data *priv = dev_get_priv(dev);
-	struct udevice *parent_dev = dev_get_parent(dev);
+	ofnode parent_node = ofnode_get_parent(dev_ofnode(dev));
 	u32 geni_se_version;
-	int ret;
+	fdt_addr_t addr;
 
 	priv->oversampling = UART_OVERSAMPLING;
 
@@ -499,16 +455,20 @@ static void geni_set_oversampling(struct udevice *dev)
 	 * It could happen that GENI SE IP is missing in the board's device
 	 * tree or GENI UART node is a direct child of SoC device tree node.
 	 */
-	if (device_get_uclass_id(parent_dev) != UCLASS_MISC)
-		return;
+	if (!ofnode_device_is_compatible(parent_node, "qcom,geni-se-qup")) {
+		pr_err("%s: UART node must be a child of geniqup node\n",
+		       __func__);
+		return -ENODEV;
+	}
 
-	ret = misc_read(parent_dev, QUP_HW_VER_REG,
-			&geni_se_version, sizeof(geni_se_version));
-	if (ret != sizeof(geni_se_version))
-		return;
+	/* Read the HW_VER register relative to the parents address space */
+	addr = ofnode_get_addr(parent_node);
+	geni_se_version = readl(addr + QUP_HW_VER_REG);
 
 	if (geni_se_version >= QUP_SE_VERSION_2_5)
 		priv->oversampling /= 2;
+
+	return 0;
 }
 
 static inline void geni_serial_init(struct udevice *dev)
@@ -553,8 +513,44 @@ static inline void geni_serial_init(struct udevice *dev)
 static int msm_serial_probe(struct udevice *dev)
 {
 	struct msm_serial_data *priv = dev_get_priv(dev);
+	int ret;
+	u32 proto;
+	struct clk *clk;
 
-	geni_set_oversampling(dev);
+	clk = devm_clk_get_optional(dev, NULL);
+	if (IS_ERR(clk))
+		dev_dbg(dev, "Couldn't find UART clock: %ld", PTR_ERR(clk));
+	else
+		priv->se = clk;
+
+	/* Try enable clock */
+	clk_enable(clk);
+
+	/* Check if firmware loading is needed (BT UART) */
+	proto = readl(priv->base + GENI_FW_REVISION_RO);
+	proto &= FW_REV_PROTOCOL_MSK;
+	proto >>= FW_REV_PROTOCOL_SHFT;
+
+	if (proto == GENI_SE_INVALID_PROTO) {
+		qcom_geni_load_firmware(priv->base, dev);
+		proto = readl(priv->base + GENI_FW_REVISION_RO);
+		proto &= FW_REV_PROTOCOL_MSK;
+		proto >>= FW_REV_PROTOCOL_SHFT;
+	}
+
+	if (proto != GENI_SE_UART) {
+		dev_err(dev, "Invalid proto %d\n", proto);
+		clk_disable(clk);
+		return -ENXIO;
+	}
+
+	/* Don't actually probe non-debug UARTs */
+	if (ofnode_device_is_compatible(dev_ofnode(dev), "qcom,geni-uart"))
+		return -ENOENT;
+
+	ret = geni_set_oversampling(dev);
+	if (ret < 0)
+		return ret;
 
 	/* No need to reinitialize the UART after relocation */
 	if (gd->flags & GD_FLG_RELOC)
@@ -581,6 +577,7 @@ static int msm_serial_ofdata_to_platdata(struct udevice *dev)
 
 static const struct udevice_id msm_serial_ids[] = {
 	{ .compatible = "qcom,geni-debug-uart" },
+	{ .compatible = "qcom,geni-uart" },
 	{ }
 };
 
@@ -592,7 +589,7 @@ U_BOOT_DRIVER(serial_msm_geni) = {
 	.priv_auto = sizeof(struct msm_serial_data),
 	.probe = msm_serial_probe,
 	.ops = &msm_serial_ops,
-	.flags = DM_FLAG_PRE_RELOC,
+	.flags = DM_FLAG_PRE_RELOC | DM_FLAG_DEFAULT_PD_CTRL_OFF,
 };
 
 #ifdef CONFIG_DEBUG_UART_MSM_GENI

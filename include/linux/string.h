@@ -14,7 +14,6 @@ extern char * strtok(char *,const char *);
 extern char * strsep(char **,const char *);
 extern __kernel_size_t strspn(const char *,const char *);
 
-
 /*
  * Include machine specific inline routines
  */
@@ -73,6 +72,9 @@ extern char * strrchr(const char *,int);
 #ifndef __HAVE_ARCH_STRSTR
 extern char * strstr(const char *,const char *);
 #endif
+#ifndef __HAVE_ARCH_STRNSTR
+extern char *strnstr(const char *, const char *, size_t);
+#endif
 #ifndef __HAVE_ARCH_STRLEN
 extern __kernel_size_t strlen(const char *);
 #endif
@@ -102,6 +104,8 @@ size_t strcspn(const char *s, const char *reject);
 #ifndef __HAVE_ARCH_STRDUP
 extern char * strdup(const char *);
 extern char * strndup(const char *, size_t);
+extern const char *strdup_const(const char *s);
+extern void kfree_const(const void *x);
 #endif
 #ifndef __HAVE_ARCH_STRSWAB
 extern char * strswab(const char *);

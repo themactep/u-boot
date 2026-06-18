@@ -4,10 +4,8 @@
  * Arthur Li <arthur.li@cortina-access.com>
  */
 
-#include <common.h>
 #include <dwmmc.h>
 #include <fdtdec.h>
-#include <asm/global_data.h>
 #include <linux/libfdt.h>
 #include <malloc.h>
 #include <errno.h>
@@ -26,8 +24,6 @@
 #define IO_DRV_SD_DS_MASK   (0xff << IO_DRV_SD_DS_OFFSET)
 
 #define MIN_FREQ (400000)
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct ca_mmc_plat {
 	struct mmc_config cfg;
@@ -87,7 +83,7 @@ unsigned int ca_dwmci_get_mmc_clock(struct dwmci_host *host, uint freq)
 		clk_div = 1;
 	}
 
-	return SD_SCLK_MAX / clk_div / (host->div + 1);
+	return SD_SCLK_MAX / clk_div;
 }
 
 static int ca_dwmmc_of_to_plat(struct udevice *dev)
